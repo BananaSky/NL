@@ -1,4 +1,5 @@
 module Calc (calculate) where
+--Module for evaluating mathamatical functions
 
 import Text.ParserCombinators.Parsec
 import Control.Monad
