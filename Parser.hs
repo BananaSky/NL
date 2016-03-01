@@ -4,18 +4,33 @@ import Control.Monad
 
 import Text.Parsec
 import Text.Parsec.String
+import Text.Parsec.Prim
 import Text.ParserCombinators.Parsec.Expr
 
 import Syntax
 
-parseStatement = try parseAssignment
-             <|> parseIfElse
+parseStatement = try parseFunction
+             <|> try parseAssignment
+             <|> try parsePrint
+             <|> try parseIfElse
+             <|> parseString
 
-parseExpression :: Parser Expression
-parseExpression = buildExpressionParser operators terms
-  where terms =  parens parseExpression
+parseCalculation :: Parser Expression
+parseCalculation = buildExpressionParser operators terms
+  where terms =  parens parseCalculation
                 <|> liftM Variable identifier
                 <|> liftM Constant integer
+
+parseString :: Parser Statement
+parseString = do
+  s <- many1 $ noneOf "\n\r"
+  return $ RawString s
+
+parsePrint :: Parser Statement
+parsePrint = do
+  reserved "print"
+  statement <- parseStatement
+  return $ PrintStatement statement
 
 parseIfElse :: Parser Statement
 parseIfElse = do
@@ -35,9 +50,9 @@ parseConditional = buildExpressionParser logicOperators boolean
                    <|> relationExpression
 
 relationExpression = do
-   a1 <- parseExpression
+   a1 <- parseCalculation
    op <- relation
-   a2 <- parseExpression
+   a2 <- parseCalculation
    return $ Relation op a1 a2
    where relation =   (reservedOp ">" >> return Greater)
                   <|> (reservedOp "<" >> return Less)
@@ -51,5 +66,32 @@ parseAssignment = do
  space
  (char '=')
  space
- value <- parseExpression
+ value <- parseCalculation
  return $ AssignmentStatement $ Assignment identifier value
+
+parseFunction :: Parser Statement
+parseFunction = do
+  name <- (many $ noneOf " :")
+  args <- functionArgs
+  char ':'
+  eol
+  cont <- many1 functionBody
+  return $ FunctionStatement $ Function name args cont
+    where functionBody = do
+                tab
+                statement <- parseStatement
+                eol
+                return statement
+          functionArgs = do
+            try (parseArgs)
+            <|> return []
+            where parseArgs = do
+                  space
+                  sepBy (many $ noneOf " :") (char ' ') >>= return
+
+
+eol =   try (string "\n\r")
+    <|> try (string "\r\n")
+    <|> string "\n"
+    <|> string "\r"
+    <?> "end of line"

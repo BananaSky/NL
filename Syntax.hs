@@ -11,8 +11,8 @@ languageDef =
             , Token.commentLine     = "--"
             , Token.identStart      = letter
             , Token.identLetter     = alphaNum
-            , Token.reservedNames   = ["true", "false"]
-            , Token.reservedOpNames = ["+", "-", "*", "/", "=", "&&", "||", "!"
+            , Token.reservedNames   = ["true", "false", "if", "then", "else", "print"]
+            , Token.reservedOpNames = ["+", "-", "*", "/", "=", "and", "or", "not"
                                      , "<", ">", "<=", ">=", "=="]
              }
 
@@ -35,9 +35,9 @@ operators = [  [Prefix  (reservedOp "-"   >> return (Neg             ))         
              ]
 
 
-logicOperators = [ [Prefix (reservedOp "!"  >> return (Not             ))          ]
-               ,  [Infix  (reservedOp "&&" >> return (BinaryCondition And     )) AssocLeft,
-                   Infix  (reservedOp "||" >> return (BinaryCondition Or      )) AssocLeft]
+logicOperators = [ [Prefix (reservedOp "not"  >> return (Not             ))          ]
+               ,  [Infix  (reservedOp "and" >> return (BinaryCondition And     )) AssocLeft,
+                   Infix  (reservedOp "or" >> return (BinaryCondition Or      )) AssocLeft]
             ]
 
 
@@ -55,6 +55,9 @@ data BinaryOperator = Add
 
 data Statement = AssignmentStatement Assignment
                | IfElseStatement IfElse
+               | FunctionStatement Function
+               | PrintStatement Statement
+               | RawString String
                  deriving (Show)
 
 data IfElse = IfElse Conditional [Statement] [Statement] deriving (Show)
@@ -71,3 +74,5 @@ data ConditionOperator = And | Or deriving (Show)
 data RelationOperator = Greater | Less | GreaterOrEqual | LessOrEqual | Equal deriving (Show)
 
 data Assignment = Assignment String Expression deriving (Show)
+
+data Function = Function String [String] [Statement] deriving (Show)
