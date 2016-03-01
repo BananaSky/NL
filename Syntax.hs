@@ -27,6 +27,20 @@ semi       = Token.semi       lexer -- parses a semicolon
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 
 
+operators = [  [Prefix  (reservedOp "-"   >> return (Neg             ))          ]
+            , [Infix  (reservedOp "*"   >> return (BinaryExpression Multiply)) AssocLeft,
+               Infix  (reservedOp "/"   >> return (BinaryExpression Divide  )) AssocLeft]
+            , [Infix  (reservedOp "+"   >> return (BinaryExpression Add     )) AssocLeft,
+               Infix  (reservedOp "-"   >> return (BinaryExpression Subtract)) AssocLeft]
+             ]
+
+
+logicOperators = [ [Prefix (reservedOp "!"  >> return (Not             ))          ]
+               ,  [Infix  (reservedOp "&&" >> return (BinaryCondition And     )) AssocLeft,
+                   Infix  (reservedOp "||" >> return (BinaryCondition Or      )) AssocLeft]
+            ]
+
+
 data Expression = Variable String
                 | Constant Integer
                 | Neg      Expression

@@ -1,61 +1,55 @@
 module Parser where
 
-import Text.ParserCombinators.Parsec
-import Syntax
-import Data.Either
-    
-file = do
-    many $ function
-    eof
-    
-function :: GenParser Char st Function
-function = do
-    name <- (many $ noneOf " :")
-    args <- functionArgs
-    char ':'
-    (many $ char ' ')
-    eol
-    cont <- functionContents
-    return $ Function name args cont
-    
-functionArgs :: GenParser Char st [Identifier]
-functionArgs = do
-    try (parseArgs)
-    <|> return []
-    where parseArgs = do
-            space
-            sepBy (many $ noneOf " :") (char ' ') >>= return
-    
-functionContents :: GenParser Char st [Statement]
-functionContents = do
-    cont <- many $ indentedLine
-    return $ rights $ map (parse parseStatement "") cont
-    
-indentedLine :: GenParser Char st String
-indentedLine = do
-            tab 
-            l <- line
-            eol
-            return l  
-           
-line :: GenParser Char st String
-line = many $ noneOf "\n\r"
+import Control.Monad
 
-parseStatement :: GenParser Char st Statement
-parseStatement = do
-    parsePrint
-    <?> "Statement Parse Attempt failed"
-           
-parsePrint :: GenParser Char st Statement
-parsePrint = do
-    string "print"
-    space
-    l <- line
-    return $ PrintStatement l
-    
-eol =   try (string "\n\r")
-    <|> try (string "\r\n")
-    <|> string "\n"
-    <|> string "\r"
-    <?> "end of line"
-    
+import Text.Parsec
+import Text.Parsec.String
+import Text.ParserCombinators.Parsec.Expr
+
+import Syntax
+
+parseStatement = try parseAssignment
+             <|> parseIfElse
+
+parseExpression :: Parser Expression
+parseExpression = buildExpressionParser operators terms
+  where terms =  parens parseExpression
+                <|> liftM Variable identifier
+                <|> liftM Constant integer
+
+parseIfElse :: Parser Statement
+parseIfElse = do
+ reserved "if"
+ condition <- parseConditional
+ reserved "then"
+ thenBranch <- many1 parseStatement
+ reserved "else"
+ elseBranch <- many1 parseStatement
+ return $ IfElseStatement $ IfElse condition thenBranch elseBranch
+
+parseConditional :: Parser Conditional
+parseConditional = buildExpressionParser logicOperators boolean
+  where boolean =  parens parseConditional
+                   <|> (reserved "true"  >> return (Boolean True ))
+                   <|> (reserved "false" >> return (Boolean False))
+                   <|> relationExpression
+
+relationExpression = do
+   a1 <- parseExpression
+   op <- relation
+   a2 <- parseExpression
+   return $ Relation op a1 a2
+   where relation =   (reservedOp ">" >> return Greater)
+                  <|> (reservedOp "<" >> return Less)
+                  <|> (reservedOp ">=" >> return GreaterOrEqual)
+                  <|> (reservedOp "<=" >> return LessOrEqual)
+                  <|> (reservedOp "==" >> return Equal)
+
+parseAssignment :: Parser Statement
+parseAssignment = do
+ identifier <- many1 letter
+ space
+ (char '=')
+ space
+ value <- parseExpression
+ return $ AssignmentStatement $ Assignment identifier value
