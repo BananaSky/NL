@@ -28,7 +28,8 @@ whiteSpace = Token.whiteSpace lexer -- parses whitespace
 
 
 operators = [  [Prefix  (reservedOp "-"   >> return (Neg             ))          ]
-            , [Infix  (reservedOp "*"   >> return (BinaryExpression Multiply)) AssocLeft,
+            , [Infix  (reservedOp "^"   >> return (BinaryExpression Exponent)) AssocLeft,
+               Infix  (reservedOp "*"   >> return (BinaryExpression Multiply)) AssocLeft,
                Infix  (reservedOp "/"   >> return (BinaryExpression Divide  )) AssocLeft]
             , [Infix  (reservedOp "+"   >> return (BinaryExpression Add     )) AssocLeft,
                Infix  (reservedOp "-"   >> return (BinaryExpression Subtract)) AssocLeft]
@@ -43,7 +44,7 @@ logicOperators = [ [Prefix (reservedOp "not"  >> return (Not             ))     
 --Calculation
 
 data Expression = Variable String
-                | Constant Integer
+                | Constant Int
                 | Neg      Expression
                 | BinaryExpression BinaryOperator Expression Expression
                   deriving (Show)
@@ -52,6 +53,7 @@ data BinaryOperator = Add
                     | Subtract
                     | Multiply
                     | Divide
+                    | Exponent
                       deriving (Show)
 
 --Conditional

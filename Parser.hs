@@ -14,7 +14,7 @@ parseStatement = try parseFunction
              <|> try parseAssignment
              <|> try parsePrint
              <|> try parseIfElse
-             <|> parseTerm
+             <|> parseType
 
 parseCalculation :: Parser Expression
 parseCalculation = buildExpressionParser operators terms
@@ -84,7 +84,7 @@ parseFunction = do
                   space
                   sepBy (many $ noneOf " :") (char ' ') >>= return
 
-parseTerm = do
+parseType = do
     result <- try parseInt <|> parseString
     return $ RawType result
     where parseInt = do
