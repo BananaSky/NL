@@ -8,23 +8,19 @@ import Text.Parsec.Prim
 import Text.ParserCombinators.Parsec.Expr
 
 import Syntax
+import Base
 
 parseStatement = try parseFunction
              <|> try parseAssignment
              <|> try parsePrint
              <|> try parseIfElse
-             <|> parseString
+             <|> parseTerm
 
 parseCalculation :: Parser Expression
 parseCalculation = buildExpressionParser operators terms
   where terms =  parens parseCalculation
                 <|> liftM Variable identifier
                 <|> liftM Constant integer
-
-parseString :: Parser Statement
-parseString = do
-  s <- many1 $ noneOf "\n\r"
-  return $ RawString s
 
 parsePrint :: Parser Statement
 parsePrint = do
@@ -63,9 +59,9 @@ relationExpression = do
 parseAssignment :: Parser Statement
 parseAssignment = do
  identifier <- many1 letter
- space
- (char '=')
- space
+ spaces
+ char '='
+ spaces
  value <- parseCalculation
  return $ AssignmentStatement $ Assignment identifier value
 
@@ -74,24 +70,26 @@ parseFunction = do
   name <- (many $ noneOf " :")
   args <- functionArgs
   char ':'
-  eol
-  cont <- many1 functionBody
+  cont <- many1 body
   return $ FunctionStatement $ Function name args cont
-    where functionBody = do
-                tab
-                statement <- parseStatement
-                eol
-                return statement
-          functionArgs = do
+  where body = do
+          eol
+          tab
+          statement <- parseStatement
+          return statement
+        functionArgs = do
             try (parseArgs)
             <|> return []
             where parseArgs = do
                   space
                   sepBy (many $ noneOf " :") (char ' ') >>= return
 
-
-eol =   try (string "\n\r")
-    <|> try (string "\r\n")
-    <|> string "\n"
-    <|> string "\r"
-    <?> "end of line"
+parseTerm = do
+    result <- try parseInt <|> parseString
+    return $ RawType result
+    where parseInt = do
+            num <- many1 digit
+            return $ Number $ read num
+          parseString = do
+            sentence <- many1 (noneOf "=+-*/^$#@!%*()<>.,\n\t")
+            return $ Sentence sentence

@@ -40,6 +40,7 @@ logicOperators = [ [Prefix (reservedOp "not"  >> return (Not             ))     
                    Infix  (reservedOp "or" >> return (BinaryCondition Or      )) AssocLeft]
             ]
 
+--Calculation
 
 data Expression = Variable String
                 | Constant Integer
@@ -53,12 +54,7 @@ data BinaryOperator = Add
                     | Divide
                       deriving (Show)
 
-data Statement = AssignmentStatement Assignment
-               | IfElseStatement IfElse
-               | FunctionStatement Function
-               | PrintStatement Statement
-               | RawString String
-                 deriving (Show)
+--Conditional
 
 data IfElse = IfElse Conditional [Statement] [Statement] deriving (Show)
 
@@ -73,6 +69,19 @@ data ConditionOperator = And | Or deriving (Show)
 
 data RelationOperator = Greater | Less | GreaterOrEqual | LessOrEqual | Equal deriving (Show)
 
+--AST (ish)
+
 data Assignment = Assignment String Expression deriving (Show)
 
 data Function = Function String [String] [Statement] deriving (Show)
+
+data Statement = AssignmentStatement Assignment
+               | IfElseStatement IfElse
+               | FunctionStatement Function
+               | PrintStatement Statement
+               | RawType Type
+                 deriving (Show)
+
+data Type = Sentence String
+          | Number   Int
+          deriving (Show)
