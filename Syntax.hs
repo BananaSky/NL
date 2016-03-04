@@ -44,7 +44,7 @@ logicOperators = [ [Prefix (reservedOp "not"  >> return (Not             ))     
 --Calculation
 
 data Expression = Variable String
-                | Constant Int
+                | Constant Integer
                 | Neg      Expression
                 | BinaryExpression BinaryOperator Expression Expression
                   deriving (Show)

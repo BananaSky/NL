@@ -10,6 +10,11 @@ import Text.ParserCombinators.Parsec.Expr
 import Syntax
 import Base
 
+parseFile :: Parser [Statement]
+parseFile = do
+  statements <- sepBy parseStatement whiteSpace
+  return statements
+
 parseStatement = try parseFunction
              <|> try parseAssignment
              <|> try parsePrint
@@ -25,6 +30,7 @@ parseCalculation = buildExpressionParser operators terms
 parsePrint :: Parser Statement
 parsePrint = do
   reserved "print"
+  optional spaces
   statement <- parseStatement
   return $ PrintStatement statement
 
@@ -67,23 +73,25 @@ parseAssignment = do
 
 parseFunction :: Parser Statement
 parseFunction = do
-  name <- (many $ noneOf " :")
+  name <- identifier
   args <- functionArgs
   char ':'
+  eol
   cont <- many1 body
   return $ FunctionStatement $ Function name args cont
   where body = do
-          eol
-          tab
+          indent
           statement <- parseStatement
+          eol
           return statement
         functionArgs = do
             try (parseArgs)
             <|> return []
-            where parseArgs = do
-                  space
-                  sepBy (many $ noneOf " :") (char ' ') >>= return
+        parseArgs = do
+          space
+          sepBy (many $ noneOf " :") (char ' ') >>= return
 
+parseType :: Parser Statement
 parseType = do
     result <- try parseInt <|> parseString
     return $ RawType result
@@ -91,5 +99,5 @@ parseType = do
             num <- many1 digit
             return $ Number $ read num
           parseString = do
-            sentence <- many1 (noneOf "=+-*/^$#@!%*()<>.,\n\t")
+            sentence <- many1 identifier
             return $ Sentence sentence

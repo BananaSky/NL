@@ -5,7 +5,7 @@ import Syntax
 test = BinaryExpression Add (BinaryExpression Exponent (Variable "x") (Constant 2)) (Constant 2)
 
 evalCalculation :: Expression -> Int
-evalCalculation (Constant n) = n
+evalCalculation (Constant n) = fromIntegral n
 evalCalculation (BinaryExpression Add      e1 e2) = evalCalculation e1 + evalCalculation e2
 evalCalculation (BinaryExpression Multiply e1 e2) = evalCalculation e1 * evalCalculation e2
 evalCalculation (BinaryExpression Divide   e1 e2) = evalCalculation e1 `div` evalCalculation e2
@@ -13,7 +13,7 @@ evalCalculation (BinaryExpression Subtract e1 e2) = evalCalculation e1 - evalCal
 evalCalculation (BinaryExpression Exponent e1 e2) = evalCalculation e1 ^ evalCalculation e2
 evalCalculation _ = undefined
 
-main = print $ derivate test
+doTest = print $ derivate test
 
 derivate :: Expression -> Expression
 derivate (Constant n) = Constant 0

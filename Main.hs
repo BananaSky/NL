@@ -2,9 +2,14 @@ module Main where
 
 import Parser
 import Eval
-import Calculus
+import Base
+import Syntax
 import Text.Parsec
+import System.IO
 
+main :: IO ()
 main = do
-  print $ parse parseFunction "" "main:\n\tprint hello world\n\tprint goodbye cruel world"
-  print $ parse parseCalculation "" "3*(x^2)+(5*x+9)"
+    handle <- openFile "test.nl" ReadMode
+    contents <- hGetContents handle
+    print $ parse parseFile "" contents
+    hClose handle
