@@ -10,19 +10,10 @@ import System.IO
 main :: IO ()
 main = do
     handle <- openFile "test.nl" ReadMode
-    contents <- hGetContents handle
+    content <- hGetContents handle
+    let contents = lines content
 
-    let d = case parse parseDerivate "" contents of
-              Right (DerivateStatement e) -> simplify e
-              Left _  -> undefined
+    let statements = parseFile contents []
 
-
-
-    putStrLn "y = "
-    print $ prettify d
-    putStrLn "y' = "
-    print $ prettify $ (simplify . simplify . simplify . simplify) (derivate d)
-
+    print statements
     hClose handle
-
-    --(endBy parseStatement whiteSpace)

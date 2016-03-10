@@ -35,12 +35,6 @@ operators = [  [Prefix  (reservedOp "-"   >> return (Neg             ))         
                Infix  (reservedOp "-"   >> return (BinaryExpression Subtract)) AssocLeft]
              ]
 
-
-logicOperators = [ [Prefix (reservedOp "not"  >> return (Not             ))          ]
-               ,  [Infix  (reservedOp "and" >> return (BinaryCondition And     )) AssocLeft,
-                   Infix  (reservedOp "or" >> return (BinaryCondition Or      )) AssocLeft]
-            ]
-
 --Calculation
 
 data Expression = Variable String
@@ -56,36 +50,17 @@ data BinaryOperator = Add
                     | Exponent
                       deriving (Show)
 
---Conditional
-
-data IfElse = IfElse Conditional [Statement] [Statement] deriving (Show)
-
-data Conditional = Boolean Bool
-                | Not Conditional
-                | Relation RelationOperator Expression Expression
-                | BinaryCondition ConditionOperator Conditional Conditional
-                deriving (Show)
-
-
-data ConditionOperator = And | Or deriving (Show)
-
-data RelationOperator = Greater | Less | GreaterOrEqual | LessOrEqual | Equal deriving (Show)
-
---AST (ish)
-
-data Assignment = Assignment String Expression deriving (Show)
-
-data Function = Function String [String] [Statement] Statement deriving (Show)
-
-data Statement = AssignmentStatement Assignment
-               | IfElseStatement IfElse
-               | FunctionStatement Function
-               | PrintStatement Statement
-               | ReturnStatement Statement
-               | DerivateStatement Expression
-               | RawType Type
-                 deriving (Show)
 
 data Type = Sentence String
           | Number   Int
           deriving (Show)
+
+--AST
+
+data Statement = Assignment          String Expression
+               | FunctionCall        String [String]
+               | PrintStatement      Statement
+               | ReturnStatement     Statement
+               | DerivateStatement   Expression
+               | RawType Type
+                 deriving (Show)

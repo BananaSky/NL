@@ -10,9 +10,17 @@ import Text.ParserCombinators.Parsec.Expr
 import Syntax
 import Base
 
-parseStatement = try parseAssignment
+parseFile :: [String] -> [Statement] -> [Statement]
+parseFile [] _ = []
+parseFile (s:ss) previous = statement : (parseFile ss $ previous ++ [statement])
+  where statement = case parse (parseStatement previous) "" s of
+              Right s -> s
+              Left _ -> undefined
+
+parseStatement :: [Statement] -> Parser Statement
+parseStatement previous =
+                 try parseAssignment
              <|> try parsePrint
-             <|> try parseIfElse
              <|> try parseDerivate
              <|> parseType
 
@@ -26,15 +34,8 @@ parsePrint :: Parser Statement
 parsePrint = do
   reserved "print"
   optional spaces
-  statement <- parseStatement
+  statement <- parseStatement []
   return $ PrintStatement statement
-
-parseReturn :: Parser Statement
-parseReturn = do
-  reserved "return"
-  optional spaces
-  statement <- parseStatement
-  return $ ReturnStatement statement
 
 parseDerivate :: Parser Statement
 parseDerivate = do
@@ -43,34 +44,6 @@ parseDerivate = do
   expression <- parseCalculation
   return $ DerivateStatement expression
 
-parseIfElse :: Parser Statement
-parseIfElse = do
- reserved "if"
- condition <- parseConditional
- reserved "then"
- thenBranch <- many1 parseStatement
- reserved "else"
- elseBranch <- many1 parseStatement
- return $ IfElseStatement $ IfElse condition thenBranch elseBranch
-
-parseConditional :: Parser Conditional
-parseConditional = buildExpressionParser logicOperators boolean
-  where boolean =  parens parseConditional
-                   <|> (reserved "true"  >> return (Boolean True ))
-                   <|> (reserved "false" >> return (Boolean False))
-                   <|> relationExpression
-
-relationExpression = do
-   a1 <- parseCalculation
-   op <- relation
-   a2 <- parseCalculation
-   return $ Relation op a1 a2
-   where relation =   (reservedOp ">" >> return Greater)
-                  <|> (reservedOp "<" >> return Less)
-                  <|> (reservedOp ">=" >> return GreaterOrEqual)
-                  <|> (reservedOp "<=" >> return LessOrEqual)
-                  <|> (reservedOp "==" >> return Equal)
-
 parseAssignment :: Parser Statement
 parseAssignment = do
  identifier <- many1 letter
@@ -78,7 +51,15 @@ parseAssignment = do
  char '='
  spaces
  value <- parseCalculation
- return $ AssignmentStatement $ Assignment identifier value
+ return $ Assignment identifier value
+
+parseFunctionCall :: Parser Statement
+parseFunctionCall = do
+  identifier <- many1 letter
+  char '('
+  args <- sepBy1 (many1 letter) (string ", ")
+  char ')'
+  return $ FunctionCall identifier args
 
 parseType :: Parser Statement
 parseType = do

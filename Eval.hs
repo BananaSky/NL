@@ -2,8 +2,6 @@ module Eval where
 
 import Syntax
 
-test = BinaryExpression Add (BinaryExpression Exponent (Variable "x") (Constant 2)) (Constant 2)
-
 evalCalculation :: Expression -> Int
 evalCalculation (Constant n) = fromIntegral n
 evalCalculation (BinaryExpression Add      e1 e2) = evalCalculation e1 + evalCalculation e2
@@ -13,7 +11,8 @@ evalCalculation (BinaryExpression Subtract e1 e2) = evalCalculation e1 - evalCal
 evalCalculation (BinaryExpression Exponent e1 e2) = evalCalculation e1 ^ evalCalculation e2
 evalCalculation _ = undefined
 
-doTest = print $ derivate test
+functionCall :: Expression -> [Expression] -> Int
+functionCall function args =  undefined
 
 derivate :: Expression -> Expression
 derivate (Constant n) = Constant 0
@@ -82,3 +81,8 @@ prettify (BinaryExpression Multiply  (Constant c) (Variable s)) = show c ++ s
 prettify (BinaryExpression Multiply   e1 e2) = prettify e1 ++ " * " ++ prettify e2
 prettify (BinaryExpression Divide     e1 e2) = "(" ++ prettify e1 ++ ") / (" ++ prettify e2 ++ ")"
 prettify (BinaryExpression Exponent   e1 e2) = prettify e1 ++ "^" ++ prettify e2
+
+getvars :: Expression -> [Expression]
+getvars v@(Variable s)             = [v]
+getvars (BinaryExpression _ e1 e2) = getvars e1 ++ getvars e2
+getvars _                          = []
