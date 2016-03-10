@@ -30,3 +30,55 @@ derivate (BinaryExpression Divide   e1 e2) = BinaryExpression Divide top bottom
 derivate (BinaryExpression Subtract e1 e2) = BinaryExpression Subtract (derivate e1) (derivate e2)
 derivate (BinaryExpression Exponent e1 e2@(Constant n)) = BinaryExpression Multiply e2 (BinaryExpression Exponent e1 (Constant (n-1)))
 derivate (BinaryExpression Exponent e1 e2) = BinaryExpression Multiply (derivate e2) (BinaryExpression Exponent e1 e2)
+
+simplify :: Expression -> Expression
+simplify (Constant n) = (Constant n)
+simplify (Variable s) = (Variable s)
+
+--Zero Rules
+simplify (BinaryExpression Multiply (Constant 0) _) = (Constant 0)
+simplify (BinaryExpression Multiply _ (Constant 0)) = (Constant 0)
+simplify (BinaryExpression Exponent _ (Constant 0)) = (Constant 1)
+simplify (BinaryExpression Exponent (Constant 0) _) = (Constant 0)
+simplify (BinaryExpression Divide   (Constant 0) _) = (Constant 0)
+simplify (BinaryExpression Divide   _ (Constant 0)) = undefined
+simplify (BinaryExpression Add (Constant 0) e) = e
+simplify (BinaryExpression Add e (Constant 0)) = e
+simplify (BinaryExpression Subtract (Constant 0) e) = Neg e
+simplify (BinaryExpression Subtract e (Constant 0)) = e
+
+--Exponent/Constant Rules
+simplify (BinaryExpression Exponent (Constant 1) _) = (Constant 1)
+simplify (BinaryExpression Exponent e (Constant 1)) = e
+simplify (BinaryExpression Exponent (Constant b) (Constant c)) = (Constant $ b ^ c)
+
+--Multiplication/Associative Rules
+simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Divide   x y)) = (BinaryExpression Divide (BinaryExpression Multiply (Constant c) x) y)
+simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Exponent x y)) = (BinaryExpression Multiply (Constant c) (BinaryExpression Exponent x y))
+simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Multiply x y)) = (BinaryExpression Multiply (BinaryExpression Multiply (Constant c) x) y)
+simplify (BinaryExpression Multiply (Constant c) (BinaryExpression anyOp    x y)) = (BinaryExpression anyOp (BinaryExpression Multiply (Constant c) x) (BinaryExpression Multiply (Constant c) y))
+
+simplify (BinaryExpression Multiply (BinaryExpression Divide   x y) (Constant c)) = (BinaryExpression Divide (BinaryExpression Multiply (Constant c) x) y)
+simplify (BinaryExpression Multiply (BinaryExpression Exponent x y) (Constant c)) = (BinaryExpression Multiply (BinaryExpression Exponent x y) (Constant c))
+simplify (BinaryExpression Multiply (BinaryExpression Multiply x y) (Constant c)) = (BinaryExpression Multiply (BinaryExpression Multiply (Constant c) x) y)
+simplify (BinaryExpression Multiply (BinaryExpression anyOp    x y) (Constant c)) = (BinaryExpression anyOp (BinaryExpression Multiply (Constant c) x) (BinaryExpression Multiply (Constant c) y))
+
+--Rules for constants
+simplify (BinaryExpression Add (Constant b) (Constant c)) = (Constant $ b + c)
+simplify (BinaryExpression Subtract (Constant b) (Constant c)) = (Constant $ b - c)
+simplify (BinaryExpression Multiply (Constant b) (Constant c)) = (Constant $ b * c)
+simplify (BinaryExpression Divide   (Constant b) (Constant c)) = (Constant $ b `div` c)
+
+--Generic rule
+simplify (BinaryExpression binop e1 e2) = (BinaryExpression binop (simplify e1) (simplify e2))
+
+prettify :: Expression -> String
+prettify (Constant n) = show n
+prettify (Variable s) = s
+prettify (Neg e) = "(-" ++ prettify e ++ ")"
+prettify (BinaryExpression Add        e1 e2) = prettify e1 ++ " + " ++ prettify e2
+prettify (BinaryExpression Multiply  (Variable s) (Constant c)) = show c ++ s
+prettify (BinaryExpression Multiply  (Constant c) (Variable s)) = show c ++ s
+prettify (BinaryExpression Multiply   e1 e2) = prettify e1 ++ " * " ++ prettify e2
+prettify (BinaryExpression Divide     e1 e2) = "(" ++ prettify e1 ++ ") / (" ++ prettify e2 ++ ")"
+prettify (BinaryExpression Exponent   e1 e2) = prettify e1 ++ "^" ++ prettify e2

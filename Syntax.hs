@@ -11,9 +11,9 @@ languageDef =
             , Token.commentLine     = "--"
             , Token.identStart      = letter
             , Token.identLetter     = alphaNum
-            , Token.reservedNames   = ["true", "false", "if", "then", "else", "print"]
+            , Token.reservedNames   = ["true", "false", "if", "then", "else", "print", "return"]
             , Token.reservedOpNames = ["+", "-", "*", "/", "=", "and", "or", "not"
-                                     , "<", ">", "<=", ">=", "=="]
+                                     , "<", ">", "<=", ">=", "==", ":"]
              }
 
 lexer = Token.makeTokenParser languageDef
@@ -75,12 +75,14 @@ data RelationOperator = Greater | Less | GreaterOrEqual | LessOrEqual | Equal de
 
 data Assignment = Assignment String Expression deriving (Show)
 
-data Function = Function String [String] [Statement] deriving (Show)
+data Function = Function String [String] [Statement] Statement deriving (Show)
 
 data Statement = AssignmentStatement Assignment
                | IfElseStatement IfElse
                | FunctionStatement Function
                | PrintStatement Statement
+               | ReturnStatement Statement
+               | DerivateStatement Expression
                | RawType Type
                  deriving (Show)
 

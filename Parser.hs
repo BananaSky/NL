@@ -10,15 +10,10 @@ import Text.ParserCombinators.Parsec.Expr
 import Syntax
 import Base
 
-parseFile :: Parser [Statement]
-parseFile = do
-  statements <- sepBy parseStatement whiteSpace
-  return statements
-
-parseStatement = try parseFunction
-             <|> try parseAssignment
+parseStatement = try parseAssignment
              <|> try parsePrint
              <|> try parseIfElse
+             <|> try parseDerivate
              <|> parseType
 
 parseCalculation :: Parser Expression
@@ -33,6 +28,20 @@ parsePrint = do
   optional spaces
   statement <- parseStatement
   return $ PrintStatement statement
+
+parseReturn :: Parser Statement
+parseReturn = do
+  reserved "return"
+  optional spaces
+  statement <- parseStatement
+  return $ ReturnStatement statement
+
+parseDerivate :: Parser Statement
+parseDerivate = do
+  reserved "derivate"
+  optional spaces
+  expression <- parseCalculation
+  return $ DerivateStatement expression
 
 parseIfElse :: Parser Statement
 parseIfElse = do
@@ -71,26 +80,6 @@ parseAssignment = do
  value <- parseCalculation
  return $ AssignmentStatement $ Assignment identifier value
 
-parseFunction :: Parser Statement
-parseFunction = do
-  name <- identifier
-  args <- functionArgs
-  char ':'
-  eol
-  cont <- many1 body
-  return $ FunctionStatement $ Function name args cont
-  where body = do
-          indent
-          statement <- parseStatement
-          eol
-          return statement
-        functionArgs = do
-            try (parseArgs)
-            <|> return []
-        parseArgs = do
-          space
-          sepBy (many $ noneOf " :") (char ' ') >>= return
-
 parseType :: Parser Statement
 parseType = do
     result <- try parseInt <|> parseString
@@ -99,5 +88,5 @@ parseType = do
             num <- many1 digit
             return $ Number $ read num
           parseString = do
-            sentence <- many1 identifier
+            sentence <- many1 alphaNum
             return $ Sentence sentence
