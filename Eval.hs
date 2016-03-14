@@ -2,6 +2,28 @@ module Eval where
 
 import Syntax
 
+printLn a = putStrLn $ show a
+printExpression = putStrLn . prettify . simplify'
+
+eval :: [Statement] -> [Statement] -> IO ()
+eval [] _ = return ()
+eval ((DerivateStatement s):ss) statements = do
+  printExpression $ derivate (toExpression s statements)
+  eval ss statements
+eval ((Identifier i):ss) statements = do
+  eval [find i statements] statements
+  eval ss statements
+eval ((Assignment i s):ss) statements = do
+  putStrLn $ i ++ ": "
+  eval [s] statements
+  eval ss statements
+eval ((Calculation e):ss) statements = do
+  print $ prettify e
+  eval ss statements
+
+find :: String -> [Statement] -> Statement
+find s statements = head $ filter (\(Assignment ident _) -> ident == s) statements
+
 evalCalculation :: Expression -> Int
 evalCalculation (Constant n) = fromIntegral n
 evalCalculation (BinaryExpression Add      e1 e2) = evalCalculation e1 + evalCalculation e2
@@ -11,13 +33,17 @@ evalCalculation (BinaryExpression Subtract e1 e2) = evalCalculation e1 - evalCal
 evalCalculation (BinaryExpression Exponent e1 e2) = evalCalculation e1 ^ evalCalculation e2
 evalCalculation _ = undefined
 
-functionCall :: Expression -> [Expression] -> Int
-functionCall function args =  undefined
+toExpression :: Statement -> [Statement] -> Expression
+toExpression (Calculation e) ss       = e
+toExpression (Assignment i s) ss      = toExpression s ss
+toExpression (DerivateStatement s) ss = derivate $ toExpression s ss
+toExpression (Identifier i) ss        = toExpression (find i ss) ss
 
 derivate :: Expression -> Expression
 derivate (Constant n) = Constant 0
 derivate (Variable s) = Constant 1
 derivate (BinaryExpression Add      e1 e2) = BinaryExpression Add (derivate e1) (derivate e2)
+derivate (BinaryExpression Multiply (Constant c) (Variable v)) = (Constant c)
 derivate (BinaryExpression Multiply e1 e2) = BinaryExpression Add udv vdu
   where udv = (BinaryExpression Multiply e1 (derivate e2))
         vdu = (BinaryExpression Multiply (derivate e1) e2)
@@ -29,6 +55,8 @@ derivate (BinaryExpression Divide   e1 e2) = BinaryExpression Divide top bottom
 derivate (BinaryExpression Subtract e1 e2) = BinaryExpression Subtract (derivate e1) (derivate e2)
 derivate (BinaryExpression Exponent e1 e2@(Constant n)) = BinaryExpression Multiply e2 (BinaryExpression Exponent e1 (Constant (n-1)))
 derivate (BinaryExpression Exponent e1 e2) = BinaryExpression Multiply (derivate e2) (BinaryExpression Exponent e1 e2)
+
+simplify' = simplify . simplify . simplify . simplify . simplify
 
 simplify :: Expression -> Expression
 simplify (Constant n) = (Constant n)
@@ -57,6 +85,7 @@ simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Exponent x y)
 simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Multiply x y)) = (BinaryExpression Multiply (BinaryExpression Multiply (Constant c) x) y)
 simplify (BinaryExpression Multiply (Constant c) (BinaryExpression anyOp    x y)) = (BinaryExpression anyOp (BinaryExpression Multiply (Constant c) x) (BinaryExpression Multiply (Constant c) y))
 
+--Flipped Mult/Assoc Rules
 simplify (BinaryExpression Multiply (BinaryExpression Divide   x y) (Constant c)) = (BinaryExpression Divide (BinaryExpression Multiply (Constant c) x) y)
 simplify (BinaryExpression Multiply (BinaryExpression Exponent x y) (Constant c)) = (BinaryExpression Multiply (BinaryExpression Exponent x y) (Constant c))
 simplify (BinaryExpression Multiply (BinaryExpression Multiply x y) (Constant c)) = (BinaryExpression Multiply (BinaryExpression Multiply (Constant c) x) y)

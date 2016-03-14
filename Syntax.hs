@@ -41,26 +41,25 @@ data Expression = Variable String
                 | Constant Integer
                 | Neg      Expression
                 | BinaryExpression BinaryOperator Expression Expression
-                  deriving (Show)
+                  deriving (Eq, Show)
 
 data BinaryOperator = Add
                     | Subtract
                     | Multiply
                     | Divide
                     | Exponent
-                      deriving (Show)
+                      deriving (Eq, Show)
 
 
 data Type = Sentence String
           | Number   Int
-          deriving (Show)
+          deriving (Eq, Show)
 
 --AST
 
-data Statement = Assignment          String Expression
-               | FunctionCall        String [String]
-               | PrintStatement      Statement
-               | ReturnStatement     Statement
-               | DerivateStatement   Expression
-               | RawType Type
-                 deriving (Show)
+data Statement = Assignment          String Statement
+               | DerivateStatement   Statement
+               | Identifier          String
+               | Calculation         Expression
+               | None
+                 deriving (Eq, Show)
