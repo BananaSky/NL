@@ -14,7 +14,7 @@ main = do
     let contents = lines content
 
     let statements = parseFile contents []
-    print statements
+    mapM printLn statements
 
     putStrLn ""
 

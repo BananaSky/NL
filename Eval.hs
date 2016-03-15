@@ -20,6 +20,7 @@ printExpression = putStrLn . prettify . simplify
 eval :: [Statement] -> [Statement] -> IO ()
 eval [] _ = return ()
 eval ((DerivateStatement s):ss) statements = do
+  putStrLn "derivative:"
   printExpression $ derivate (toExpression s statements)
   eval ss statements
 eval ((Identifier i):ss) statements = do
@@ -32,18 +33,31 @@ eval ((Assignment i s):ss) statements = do
 eval ((Calculation e):ss) statements = do
   print $ prettify e
   eval ss statements
+eval ((FunctionCall (Identifier i) args):ss) statements = do
+  putStrLn $ i ++ show args ++ ": "
+  print $ function (toExpression (find i statements) statements) args
+  eval ss statements
 
 find :: String -> [Statement] -> Statement
-find s statements = head $ filter (\(Assignment ident _) -> ident == s) statements
+find s statements = head $ filter search statements
+  where search (Assignment ident _) = ident == s
+        search (FunctionCall (Identifier i) _) = i == s
 
-evalCalculation :: Expression -> Int
-evalCalculation (Constant n) = fromIntegral n
-evalCalculation (BinaryExpression Add      e1 e2) = evalCalculation e1 + evalCalculation e2
-evalCalculation (BinaryExpression Multiply e1 e2) = evalCalculation e1 * evalCalculation e2
-evalCalculation (BinaryExpression Divide   e1 e2) = evalCalculation e1 `div` evalCalculation e2
-evalCalculation (BinaryExpression Subtract e1 e2) = evalCalculation e1 - evalCalculation e2
-evalCalculation (BinaryExpression Exponent e1 e2) = evalCalculation e1 ^ evalCalculation e2
-evalCalculation _ = undefined
+
+fromType :: Type -> Int
+fromType (Number n) = n
+
+function :: Expression -> [Type] -> Int
+function (Constant n) args = fromIntegral n
+function (BinaryExpression Add      e1 e2) args = function e1 args + function e2 args
+function (BinaryExpression Multiply e1 e2) args = function e1 args * function e2 args
+function (BinaryExpression Divide   e1 e2) args = function e1 args `div` function e2 args
+function (BinaryExpression Subtract e1 e2) args = function e1 args - function e2 args
+function (BinaryExpression Exponent e1 e2) args = function e1 args ^ function e2 args
+function (Variable v) args = case v of
+  "x" -> fromType $ args !! 0
+  "y" -> fromType $ args !! 1
+  "z" -> fromType $ args !! 2
 
 toExpression :: Statement -> [Statement] -> Expression
 toExpression (Calculation e) ss       = e

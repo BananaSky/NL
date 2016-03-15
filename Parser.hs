@@ -26,7 +26,7 @@ fromStatement previous _ = previous
 parseStatement :: [String] -> Parser Statement
 parseStatement previous =
                  try (parseAssignment previous)
-             --()<|> try (parsePrint      previous)
+             <|> try (parseFunctionCall      previous)
              <|> try (parseDerivate   previous)
              <|> try (parsePrevious   previous)
              <|> try parseCalculation
@@ -73,16 +73,19 @@ parseAssignment previous = do
  value <- parseStatement previous
  return $ Assignment identifier value
 
-{-
-parseFunctionCall :: Parser Statement
-parseFunctionCall = do
-  identifier <- many1 letter
-  char '('
-  args <- sepBy1 (many1 letter) (string ", ")
-  char ')'
-  return $ FunctionCall identifier args-}
 
-{-
+parseFunctionCall :: [String] -> Parser Statement
+parseFunctionCall previous = do
+  identifier <- parsePrevious previous
+  char '('
+  args <- sepBy1 parseInt (string ", ")
+  char ')'
+  return $ FunctionCall identifier args
+  where parseInt = do
+          num <- many1 digit
+          return $ Number $ read num
+
+{-}
 parseType :: Parser Statement
 parseType = do
     result <- try parseInt <|> parseString

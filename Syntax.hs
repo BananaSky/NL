@@ -51,13 +51,13 @@ data BinaryOperator = Add
                       deriving (Eq, Show)
 
 
-data Type = Sentence String
-          | Number   Int
+data Type = Number   Int
           deriving (Eq, Show)
 
 --AST
 
 data Statement = Assignment          String Statement
+               | FunctionCall        Statement [Type]
                | DerivateStatement   Statement
                | Identifier          String
                | Calculation         Expression
