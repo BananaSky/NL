@@ -70,17 +70,18 @@ derivate (Constant n) = Constant 0
 derivate (Variable s) = Constant 1
 derivate (BinaryExpression Add      e1 e2) = (derivate e1) |+| (derivate e2)
 derivate (BinaryExpression Multiply (Constant c) (Variable v)) = (Constant c)
-derivate (BinaryExpression Multiply e1 e2) = BinaryExpression Add udv vdu
-  where udv = (BinaryExpression Multiply e1 (derivate e2))
-        vdu = (BinaryExpression Multiply (derivate e1) e2)
-derivate (BinaryExpression Divide   e1 e2) = BinaryExpression Divide top bottom
-  where top    = BinaryExpression Subtract ldh hdl
-        hdl    = (BinaryExpression Multiply e1 (derivate e2))
-        ldh    = (BinaryExpression Multiply e2 (derivate e1))
-        bottom = (BinaryExpression Exponent e2 (Constant 2))
+derivate (BinaryExpression Multiply e1 e2) = udv |+| vdu
+  where udv = e1 |*| (derivate e2)
+        vdu = (derivate e1) |*| e2
+derivate (BinaryExpression Divide   e1 e2) = top |/| bottom
+  where top    = ldh |-| hdl
+        hdl    = e1  |*| (derivate e2)
+        ldh    = e2  |*| (derivate e1)
+        bottom = e2  |^| (Constant 2)
 derivate (BinaryExpression Subtract e1 e2) = BinaryExpression Subtract (derivate e1) (derivate e2)
-derivate (BinaryExpression Exponent e1 e2@(Constant n)) = BinaryExpression Multiply e2 (BinaryExpression Exponent e1 (Constant (n-1)))
-derivate (BinaryExpression Exponent e1 e2) = BinaryExpression Multiply (derivate e2) (BinaryExpression Exponent e1 e2)
+derivate e@(BinaryExpression Exponent (Constant c) (Variable v)) = (Function (Log 2) (Constant c)) |*| e
+derivate (BinaryExpression Exponent e1 e2@(Constant n)) = e2 |*| (e1 |^| (Constant (n-1)))
+derivate (BinaryExpression Exponent e1 e2) = (derivate e2) |*| (e1 |^| e2)
 
 
 simplify :: Expression -> Expression

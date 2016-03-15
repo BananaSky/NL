@@ -34,7 +34,7 @@ parseStatement previous =
 
 parsePrevious :: [String] -> Parser Statement
 parsePrevious previous = do
-  p <- choice (map string previous)
+  p <- choice (map string $ reverse previous)
   return $ Identifier p
 
 parseCalculation :: Parser Statement

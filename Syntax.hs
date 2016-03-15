@@ -41,6 +41,7 @@ data Expression = Variable String
                 | Constant Integer
                 | Neg      Expression
                 | BinaryExpression BinaryOperator Expression Expression
+                | Function LibraryFunction Expression
                   deriving (Eq, Show)
 
 data BinaryOperator = Add
@@ -50,6 +51,12 @@ data BinaryOperator = Add
                     | Exponent
                       deriving (Eq, Show)
 
+type Base = Int
+data LibraryFunction = Log Int
+                     | Sin
+                     | Cos
+                     | Tan
+                     deriving (Eq, Show)
 
 data Type = Number   Int
           deriving (Eq, Show)
