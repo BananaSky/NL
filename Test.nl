@@ -1,5 +1,15 @@
-f = 4*(x^2) + 3*x + 2
+f = 4*(x^2) + 3*(x^6) + 2
 
-df = derivate f
+g = derivate f
 
-ddf = derivate df
+h = derivate g
+
+i = derivate h
+
+j = derivate i
+
+k = derivate j
+
+l = derivate k
+
+m = derivate l

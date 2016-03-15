@@ -2,8 +2,20 @@ module Eval where
 
 import Syntax
 
+infixl 7 |*|
+infixl 7 |/|
+infixl 8 |^|
+infixl 6 |+|
+infixl 6 |-|
+
+(|*|) e1 e2 = BinaryExpression Multiply e1 e2
+(|/|) e1 e2 = BinaryExpression Divide   e1 e2
+(|^|) e1 e2 = BinaryExpression Exponent e1 e2
+(|+|) e1 e2 = BinaryExpression Add      e1 e2
+(|-|) e1 e2 = BinaryExpression Subtract e1 e2
+
 printLn a = putStrLn $ show a
-printExpression = putStrLn . prettify . simplify'
+printExpression = putStrLn . prettify . simplify
 
 eval :: [Statement] -> [Statement] -> IO ()
 eval [] _ = return ()
@@ -42,7 +54,7 @@ toExpression (Identifier i) ss        = toExpression (find i ss) ss
 derivate :: Expression -> Expression
 derivate (Constant n) = Constant 0
 derivate (Variable s) = Constant 1
-derivate (BinaryExpression Add      e1 e2) = BinaryExpression Add (derivate e1) (derivate e2)
+derivate (BinaryExpression Add      e1 e2) = (derivate e1) |+| (derivate e2)
 derivate (BinaryExpression Multiply (Constant c) (Variable v)) = (Constant c)
 derivate (BinaryExpression Multiply e1 e2) = BinaryExpression Add udv vdu
   where udv = (BinaryExpression Multiply e1 (derivate e2))
@@ -56,49 +68,60 @@ derivate (BinaryExpression Subtract e1 e2) = BinaryExpression Subtract (derivate
 derivate (BinaryExpression Exponent e1 e2@(Constant n)) = BinaryExpression Multiply e2 (BinaryExpression Exponent e1 (Constant (n-1)))
 derivate (BinaryExpression Exponent e1 e2) = BinaryExpression Multiply (derivate e2) (BinaryExpression Exponent e1 e2)
 
-simplify' = simplify . simplify . simplify . simplify . simplify
 
 simplify :: Expression -> Expression
-simplify (Constant n) = (Constant n)
-simplify (Variable s) = (Variable s)
+simplify   (Constant n) = (Constant n)
+simplify   (Variable s) = (Variable s)
+simplify   (Neg e)      = (Neg $ simplify e)
+simplify e@(BinaryExpression binop e1 e2) = case binop of
+  Add      -> simplifyAdd se1 se2
+  Subtract -> simplifySub se1 se2
+  Multiply -> simplifyMul se1 se2
+  Divide   -> simplifyDiv se1 se2
+  Exponent -> simplifyExp se1 se2
+  where se1 = simplify e1
+        se2 = simplify e2
 
---Zero Rules
-simplify (BinaryExpression Multiply (Constant 0) _) = (Constant 0)
-simplify (BinaryExpression Multiply _ (Constant 0)) = (Constant 0)
-simplify (BinaryExpression Exponent _ (Constant 0)) = (Constant 1)
-simplify (BinaryExpression Exponent (Constant 0) _) = (Constant 0)
-simplify (BinaryExpression Divide   (Constant 0) _) = (Constant 0)
-simplify (BinaryExpression Divide   _ (Constant 0)) = undefined
-simplify (BinaryExpression Add (Constant 0) e) = e
-simplify (BinaryExpression Add e (Constant 0)) = e
-simplify (BinaryExpression Subtract (Constant 0) e) = Neg e
-simplify (BinaryExpression Subtract e (Constant 0)) = e
+simplifyAdd :: Expression -> Expression -> Expression
+simplifyAdd (Constant 0) e = simplify e
+simplifyAdd e (Constant 0) = simplify e
+simplifyAdd (Constant a) (Constant b) = (Constant $ a + b)
+simplifyAdd e1 e2 = simplify e1 |+| simplify e2
 
---Exponent/Constant Rules
-simplify (BinaryExpression Exponent (Constant 1) _) = (Constant 1)
-simplify (BinaryExpression Exponent e (Constant 1)) = e
-simplify (BinaryExpression Exponent (Constant b) (Constant c)) = (Constant $ b ^ c)
+simplifyExp :: Expression -> Expression -> Expression
+simplifyExp (Constant 1) _ = (Constant 1)
+simplifyExp e (Constant 1) = simplify e
+simplifyExp e (Constant 0) = (Constant 1)
+simplifyExp (Constant 0) e = (Constant 0)
+simplifyExp (Constant a) (Constant b) = (Constant $ a ^ b)
+simplifyExp e1 e2 = simplify e1 |^| simplify e2
 
---Multiplication/Associative Rules
-simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Divide   x y)) = (BinaryExpression Divide (BinaryExpression Multiply (Constant c) x) y)
-simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Exponent x y)) = (BinaryExpression Multiply (Constant c) (BinaryExpression Exponent x y))
-simplify (BinaryExpression Multiply (Constant c) (BinaryExpression Multiply x y)) = (BinaryExpression Multiply (BinaryExpression Multiply (Constant c) x) y)
-simplify (BinaryExpression Multiply (Constant c) (BinaryExpression anyOp    x y)) = (BinaryExpression anyOp (BinaryExpression Multiply (Constant c) x) (BinaryExpression Multiply (Constant c) y))
+simplifyDiv :: Expression -> Expression -> Expression
+simplifyDiv (Constant 0) _ = (Constant 0)
+simplifyDiv _ (Constant 0) = undefined
+simplifyDiv (Constant a) (Constant b) = (Constant $ a `div` b)
+simplifyDiv e1 e2 = simplify e1 |/| simplify e2
 
---Flipped Mult/Assoc Rules
-simplify (BinaryExpression Multiply (BinaryExpression Divide   x y) (Constant c)) = (BinaryExpression Divide (BinaryExpression Multiply (Constant c) x) y)
-simplify (BinaryExpression Multiply (BinaryExpression Exponent x y) (Constant c)) = (BinaryExpression Multiply (BinaryExpression Exponent x y) (Constant c))
-simplify (BinaryExpression Multiply (BinaryExpression Multiply x y) (Constant c)) = (BinaryExpression Multiply (BinaryExpression Multiply (Constant c) x) y)
-simplify (BinaryExpression Multiply (BinaryExpression anyOp    x y) (Constant c)) = (BinaryExpression anyOp (BinaryExpression Multiply (Constant c) x) (BinaryExpression Multiply (Constant c) y))
+simplifyMul :: Expression -> Expression -> Expression
+simplifyMul (Constant 0) _ = (Constant 0)
+simplifyMul _ (Constant 0) = (Constant 0)
+simplifyMul (Constant a) (Constant b) = (Constant $ a * b)
 
---Rules for constants
-simplify (BinaryExpression Add (Constant b) (Constant c)) = (Constant $ b + c)
-simplify (BinaryExpression Subtract (Constant b) (Constant c)) = (Constant $ b - c)
-simplify (BinaryExpression Multiply (Constant b) (Constant c)) = (Constant $ b * c)
-simplify (BinaryExpression Divide   (Constant b) (Constant c)) = (Constant $ b `div` c)
+simplifyMul e (BinaryExpression Add e1 e2)       = (simplify e |*| simplify e1) |+| (simplify e |*| simplify e2)
+simplifyMul e (BinaryExpression Subtract e1 e2)  = (simplify e |*| simplify e1) |-| (simplify e |*| simplify e2)
+simplifyMul (BinaryExpression Add e1 e2)      e  = simplify (simplify e |*| simplify e1) |+| (simplify e |*| simplify e2)
+simplifyMul (BinaryExpression Subtract e1 e2) e  = simplify (simplify e |*| simplify e1) |-| (simplify e |*| simplify e2)
 
---Generic rule
-simplify (BinaryExpression binop e1 e2) = (BinaryExpression binop (simplify e1) (simplify e2))
+simplifyMul e (BinaryExpression Multiply e1 e2)  = simplify (simplify e |*| simplify e1) |*| simplify e2
+simplifyMul (BinaryExpression Multiply e1 e2) e  = simplify (simplify e |*| simplify e1) |*| simplify e2
+
+simplifyMul e1 e2 = simplify e1 |*| simplify e2
+
+simplifySub :: Expression -> Expression -> Expression
+simplifySub (Constant 0) e = Neg $ simplify e
+simplifySub e (Constant 0) = simplify e
+simplifySub (Constant a) (Constant b) = (Constant $ a - b)
+simplifySub e1 e2 = simplify e1 |-| simplify e2
 
 prettify :: Expression -> String
 prettify (Constant n) = show n
