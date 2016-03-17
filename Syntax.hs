@@ -11,7 +11,7 @@ languageDef =
             , Token.commentLine     = "--"
             , Token.identStart      = letter
             , Token.identLetter     = alphaNum
-            , Token.reservedNames   = ["true", "false", "if", "then", "else", "print", "return"]
+            , Token.reservedNames   = ["true", "false", "if", "then", "else", "print", "return", "integrate", "derivate"]
             , Token.reservedOpNames = ["+", "-", "*", "/", "=", "and", "or", "not"
                                      , "<", ">", "<=", ">=", "==", ":"]
              }
@@ -25,7 +25,6 @@ parens     = Token.parens     lexer -- parses surrounding parenthesis:
 integer    = Token.integer    lexer -- parses an integer
 semi       = Token.semi       lexer -- parses a semicolon
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
-
 
 operators = [  [Prefix  (reservedOp "-"   >> return (Neg             ))          ]
             , [Infix  (reservedOp "^"   >> return (BinaryExpression Exponent)) AssocLeft,
@@ -51,21 +50,19 @@ data BinaryOperator = Add
                     | Exponent
                       deriving (Eq, Show)
 
-type Base = Int
-data LibraryFunction = Log Int
+type Base = Double
+data LibraryFunction = Log Base
                      | Sin
                      | Cos
                      | Tan
                      deriving (Eq, Show)
 
-data Type = Number   Int
-          deriving (Eq, Show)
-
 --AST
 
 data Statement = Assignment          String Statement
-               | FunctionCall        Statement [Type]
+               | FunctionCall        Statement [Integer]
                | DerivateStatement   Statement
+               | IntegrateStatement  Statement
                | Identifier          String
                | Calculation         Expression
                | None

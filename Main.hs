@@ -9,6 +9,7 @@ import System.IO
 
 main :: IO ()
 main = do
+
     handle <- openFile "test.nl" ReadMode
     content <- hGetContents handle
     let contents = lines content
@@ -21,3 +22,4 @@ main = do
     eval statements statements
 
     hClose handle
+    return ()

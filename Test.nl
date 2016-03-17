@@ -4,19 +4,8 @@ f(0)
 
 g = derivate f
 
-g(2)
+g(7)
 
-h = derivate g
+h = integrate (x^7)
 
-h(34)
-
-i = x + y
-
-i(2, 1)
-
-function = z^4+ x^3 + 200*y
-
-gunction = derivate function
-
-function(1, 2, 3)
-gunction(4, 7, 12)
+i = derivate h

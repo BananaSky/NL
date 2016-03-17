@@ -25,12 +25,12 @@ fromStatement previous _ = previous
 
 parseStatement :: [String] -> Parser Statement
 parseStatement previous =
-                 try (parseAssignment previous)
+                 try (parseAssignment        previous)
              <|> try (parseFunctionCall      previous)
-             <|> try (parseDerivate   previous)
-             <|> try (parsePrevious   previous)
+             <|> try (parseDerivate          previous)
+             <|> try (parseIntegrate         previous)
+             <|> try (parsePrevious          previous)
              <|> try parseCalculation
-             --()<|> parseType
 
 parsePrevious :: [String] -> Parser Statement
 parsePrevious previous = do
@@ -38,7 +38,7 @@ parsePrevious previous = do
   return $ Identifier p
 
 parseCalculation :: Parser Statement
-parseCalculation = do
+parseCalculation  = do
   expression <- parseCalculation'
   return $ Calculation expression
 
@@ -48,21 +48,19 @@ parseCalculation' = buildExpressionParser operators terms
                 <|> liftM Variable identifier
                 <|> liftM Constant integer
 
-{-
-parsePrint :: [String] -> Parser Statement
-parsePrint previous = do
-  reserved "print"
-  optional spaces
-  statement <- parseStatement previous
-  return $ PrintStatement statement
--}
-
 parseDerivate :: [String] -> Parser Statement
 parseDerivate previous = do
   reserved "derivate"
   optional spaces
   expression <- parseStatement previous
   return $ DerivateStatement expression
+
+parseIntegrate :: [String] -> Parser Statement
+parseIntegrate previous = do
+  reserved "integrate"
+  optional spaces
+  expression <- parseStatement previous
+  return $ IntegrateStatement expression
 
 parseAssignment :: [String] -> Parser Statement
 parseAssignment previous = do
@@ -73,26 +71,10 @@ parseAssignment previous = do
  value <- parseStatement previous
  return $ Assignment identifier value
 
-
 parseFunctionCall :: [String] -> Parser Statement
 parseFunctionCall previous = do
   identifier <- parsePrevious previous
   char '('
-  args <- sepBy1 parseInt (string ", ")
+  args <- sepBy1 integer (string ", ")
   char ')'
   return $ FunctionCall identifier args
-  where parseInt = do
-          num <- many1 digit
-          return $ Number $ read num
-
-{-}
-parseType :: Parser Statement
-parseType = do
-    result <- try parseInt <|> parseString
-    return $ RawType result
-    where parseInt = do
-            num <- many1 digit
-            return $ Number $ read num
-          parseString = do
-            sentence <- many1 alphaNum
-            return $ Sentence sentence-}
