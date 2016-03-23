@@ -54,7 +54,6 @@ type Base = Double
 data LibraryFunction = Log Base
                      | Sin
                      | Cos
-                     | Tan
                      deriving (Eq, Show)
 
 --AST
