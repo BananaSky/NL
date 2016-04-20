@@ -29,6 +29,7 @@ parseStatement previous =
              <|> try (parseFunctionCall      previous)
              <|> try (parseDerivate          previous)
              <|> try (parseIntegrate         previous)
+             <|> try (parseSolve             previous)
              <|> try (parsePrevious          previous)
              <|> try parseCalculation
 
@@ -52,15 +53,22 @@ parseDerivate :: [String] -> Parser Statement
 parseDerivate previous = do
   reserved "derivate"
   optional spaces
-  expression <- parseStatement previous
-  return $ DerivateStatement expression
+  statement <- parseStatement previous
+  return $ DerivateStatement statement
 
 parseIntegrate :: [String] -> Parser Statement
 parseIntegrate previous = do
   reserved "integrate"
   optional spaces
-  expression <- parseStatement previous
-  return $ IntegrateStatement expression
+  statement <- parseStatement previous
+  return $ IntegrateStatement statement
+
+parseSolve :: [String] -> Parser Statement
+parseSolve previous = do
+  reserved "solve"
+  optional spaces
+  (Calculation expression) <- parseCalculation
+  return $ SolveStatement expression
 
 parseAssignment :: [String] -> Parser Statement
 parseAssignment previous = do

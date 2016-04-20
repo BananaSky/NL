@@ -26,19 +26,22 @@ integer    = Token.integer    lexer -- parses an integer
 semi       = Token.semi       lexer -- parses a semicolon
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 
-operators = [  [Prefix  (reservedOp "-"   >> return (Neg             ))          ]
+operators = [ [Prefix  (reservedOp "-"   >> return (Neg             ))          ]
             , [Infix  (reservedOp "^"   >> return (BinaryExpression Exponent)) AssocLeft,
                Infix  (reservedOp "*"   >> return (BinaryExpression Multiply)) AssocLeft,
                Infix  (reservedOp "/"   >> return (BinaryExpression Divide  )) AssocLeft]
             , [Infix  (reservedOp "+"   >> return (BinaryExpression Add     )) AssocLeft,
                Infix  (reservedOp "-"   >> return (BinaryExpression Subtract)) AssocLeft]
+            , [Infix  (reservedOp "="   >> return (Equality)) AssocLeft]
              ]
 
 --Calculation
 
-data Expression = Variable String
-                | Constant Integer
-                | Neg      Expression
+data Expression = Variable   String
+                | Constant   Integer
+                | Fractional Double
+                | Neg        Expression
+                | Equality   Expression Expression
                 | BinaryExpression BinaryOperator Expression Expression
                 | Function LibraryFunction Expression
                   deriving (Eq, Show)
@@ -50,10 +53,12 @@ data BinaryOperator = Add
                     | Exponent
                       deriving (Eq, Show)
 
-type Base = Double
+type Base = Expression
+
 data LibraryFunction = Log Base
                      | Sin
                      | Cos
+                     | Root Base
                      deriving (Eq, Show)
 
 --AST
@@ -62,6 +67,7 @@ data Statement = Assignment          String Statement
                | FunctionCall        Statement [Integer]
                | DerivateStatement   Statement
                | IntegrateStatement  Statement
+               | SolveStatement      Expression
                | Identifier          String
                | Calculation         Expression
                | None
