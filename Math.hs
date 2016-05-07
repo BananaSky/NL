@@ -166,17 +166,34 @@ integrate (BinaryExpression Add      e1 e2) = integrate e1 |+| integrate e2
 integrate (BinaryExpression Subtract e1 e2) = integrate e1 |-| integrate e2
 integrate (BinaryExpression Multiply (Constant c) e2) = (Constant c) |*| integrate e2
 integrate (BinaryExpression Multiply e1 (Constant c)) = (Constant c) |*| integrate e1
-integrate e = if (length $ filter (test e) (terms e)) > 0
+integrate e = if (length $ filter (testUSub e) (terms e)) > 0
               then uSub e
-              else (Variable "By-Parts Failed")
+              else byParts e
 
 uSub :: Expression -> Expression
 uSub e = constantPart |*| integrate (simplify $ remove e du)
-  where possible_us  = filter (test e) ts
+  where possible_us  = filter (testUSub e) ts
         u            = head $ possible_us
         ts           = terms e
-        du           = simplify $ nochain u
+        du           = simplify . simplify $ nochain u
         constantPart = solve (remove u du |=| u)
+
+testUSub :: Expression -> Expression -> Bool
+testUSub e u = if u /= e then isConstant $  remove (remove e du) u
+           else False
+  where du = simplify .simplify $ nochain u --Derivate, but don't apply chain rule
+
+byParts :: Expression -> Expression
+byParts e = (u |*| v) |-| integrate (v |*| du)
+  where ts          = terms e
+        possible_us = filter (testByParts e) ts
+        u           = head $ possible_us
+        dv          = remove e u
+        du          = simplify . simplify $ derivate u
+        v           = integrate dv
+
+testByParts :: Expression -> Expression -> Bool
+testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
 
     {-
     Sudv = uv - Svdu
@@ -185,10 +202,7 @@ uSub e = constantPart |*| integrate (simplify $ remove e du)
     dv should be integrateable
     -}
 
-test :: Expression -> Expression -> Bool
-test e u = if u /= e then isConstant $  remove (remove e du) u
-           else False
-  where du = simplify $ nochain u --Derivate, but don't apply chain rule
+
 
 find :: String -> [Statement] -> Statement
 find s statements = head $ filter search statements
