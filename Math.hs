@@ -73,18 +73,18 @@ simplifyMul (Constant 1) e = e
 simplifyMul e (Constant 1) = e
 simplifyMul (Constant a) (Constant b) = (Constant $ a * b)
 
-simplifyMul e (BinaryExpression Add e1 e2)       = (simplify e |*| simplify e1) |+| (simplify e |*| simplify e2)
-simplifyMul e (BinaryExpression Subtract e1 e2)  = (simplify e |*| simplify e1) |-| (simplify e |*| simplify e2)
-simplifyMul (BinaryExpression Add e1 e2)      e  = (simplify e |*| simplify e1) |+| (simplify e |*| simplify e2)
-simplifyMul (BinaryExpression Subtract e1 e2) e  = (simplify e |*| simplify e1) |-| (simplify e |*| simplify e2)
+simplifyMul e (BinaryExpression Add e1 e2)       = simplify $ (simplify e |*| simplify e1) |+| (simplify e |*| simplify e2)
+simplifyMul e (BinaryExpression Subtract e1 e2)  = simplify $ (simplify e |*| simplify e1) |-| (simplify e |*| simplify e2)
+simplifyMul (BinaryExpression Add e1 e2)      e  = simplify $ (simplify e |*| simplify e1) |+| (simplify e |*| simplify e2)
+simplifyMul (BinaryExpression Subtract e1 e2) e  = simplify $ (simplify e |*| simplify e1) |-| (simplify e |*| simplify e2)
 
 simplifyMul e (BinaryExpression Multiply e1 e2)  = (simplify e |*| simplify e1) |*| simplify e2
 simplifyMul (BinaryExpression Multiply e1 e2) e  = (simplify e |*| simplify e1) |*| simplify e2
 
-simplifyMul (BinaryExpression Divide e1 e2) e  = if e == e2
+simplifyMul (BinaryExpression Divide e1 e2) e  = if simplify e == simplify e2
   then simplify e1
   else (simplify e |*| simplify e1) |/| simplify e2
-simplifyMul e (BinaryExpression Divide e1 e2)  = if e == e2
+simplifyMul e (BinaryExpression Divide e1 e2)  = if simplify e == simplify e2
   then simplify e1
   else (simplify e |*| simplify e1) |/| simplify e2
 

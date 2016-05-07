@@ -1,1 +1,2 @@
-derivate x^6 + x^x
+e = integrate x
+derivate e

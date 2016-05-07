@@ -4,7 +4,7 @@ import Syntax
 import Math
 
 printLn a = putStrLn $ show a
-printExpression = putStrLn . prettify . simplify . simplify . simplify . simplify . simplify
+printExpression = putStrLn . prettify . simplify
 
 eval :: [Statement] -> [Statement] -> IO ()
 eval [] _ = return ()
