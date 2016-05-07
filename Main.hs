@@ -10,7 +10,7 @@ import System.IO
 main :: IO ()
 main = do
 
-    handle <- openFile "test.nl" ReadMode
+    handle  <- openFile "test.nl" ReadMode
     content <- hGetContents handle
     let contents = lines content
     let statements = parseFile contents []

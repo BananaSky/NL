@@ -1,1 +1,1 @@
-solve 1^x = 2
+derivate x^6 + x^x

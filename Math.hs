@@ -133,22 +133,6 @@ derivate (Function (Log b) e) = ((Constant 1) |/| e) |*| derivate e
 derivate (Function Sin e) = derivate e |*| (Function Cos e)
 derivate (Function Cos e) = Neg $ derivate e |*| (Function Sin e)
 
-integrate :: Expression -> Expression
-integrate (Constant c) = (Variable "x") |*| (Constant c)
-integrate (Variable v) = ((Constant 1) |/| (Constant 2)) |*| ((Variable v) |^| (Constant 2))
-integrate (Neg e)      = (Neg $ integrate e)
-integrate (BinaryExpression Exponent ex (Constant c)) = constant |*| (ex |^| (Constant (c+1)))
-  where constant = (Constant 1) |/| (Constant (c+1))
-integrate (BinaryExpression Add      e1 e2) = integrate e1 |+| integrate e2
-integrate (BinaryExpression Subtract e1 e2) = integrate e1 |-| integrate e2
-integrate (BinaryExpression Multiply (Constant c) e2) = (Constant c) |*| integrate e2
-integrate (BinaryExpression Multiply e1 (Constant c)) = (Constant c) |*| integrate e1
-integrate e =  constantPart |*| integrate (simplify $ remove e du)
-  where u            = head $ filter (test e) ts
-        ts           = terms e
-        du           = simplify $ nochain u
-        constantPart = solve (remove u du |=| u)
-
 --Derivate sans chain rule
 nochain :: Expression -> Expression
 nochain (Constant n) = Constant 0
@@ -171,6 +155,35 @@ nochain (BinaryExpression Exponent e1 e2) = e1 |^| e2
 nochain (Function (Log b) e) = (Constant 1) |/| e
 nochain (Function Sin e) = Function Cos e
 nochain (Function Cos e) = Neg $ Function Sin e
+
+integrate :: Expression -> Expression
+integrate (Constant c) = (Variable "x") |*| (Constant c)
+integrate (Variable v) = ((Constant 1) |/| (Constant 2)) |*| ((Variable v) |^| (Constant 2))
+integrate (Neg e)      = (Neg $ integrate e)
+integrate (BinaryExpression Exponent ex (Constant c)) = constant |*| (ex |^| (Constant (c+1)))
+  where constant = (Constant 1) |/| (Constant (c+1))
+integrate (BinaryExpression Add      e1 e2) = integrate e1 |+| integrate e2
+integrate (BinaryExpression Subtract e1 e2) = integrate e1 |-| integrate e2
+integrate (BinaryExpression Multiply (Constant c) e2) = (Constant c) |*| integrate e2
+integrate (BinaryExpression Multiply e1 (Constant c)) = (Constant c) |*| integrate e1
+integrate e = if (length $ filter (test e) (terms e)) > 0
+              then uSub e
+              else (Variable "By-Parts Failed")
+
+uSub :: Expression -> Expression
+uSub e = constantPart |*| integrate (simplify $ remove e du)
+  where possible_us  = filter (test e) ts
+        u            = head $ possible_us
+        ts           = terms e
+        du           = simplify $ nochain u
+        constantPart = solve (remove u du |=| u)
+
+    {-
+    Sudv = uv - Svdu
+    need to find u and dv
+    u should be simpler when integrated
+    dv should be integrateable
+    -}
 
 test :: Expression -> Expression -> Bool
 test e u = if u /= e then isConstant $  remove (remove e du) u
