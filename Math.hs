@@ -45,7 +45,8 @@ simplify e@(BinaryExpression binop e1 e2) = case binop of
         se2 = simplify e2
 simplify (Equality e1 e2) = if isConstant e1 then simplify e2 |=| simplify e1
                                              else simplify e1 |=| simplify e2
-simplify e = e
+simplify (Function f e) = (Function f (simplify e))
+--simplify e = e
 
 simplifyAdd :: Expression -> Expression -> Expression
 simplifyAdd (Constant 0) e = simplify e
@@ -132,6 +133,10 @@ derivate (BinaryExpression Exponent e1 e2) = (derivate e2) |*| (e1 |^| e2)
 derivate (Function (Log b) e) = ((Constant 1) |/| e) |*| derivate e
 derivate (Function Sin e) = derivate e |*| (Function Cos e)
 derivate (Function Cos e) = Neg $ derivate e |*| (Function Sin e)
+derivate (Function Tan e) = derivate e |*| (Function Sec e |^| Constant 2)
+derivate (Function Sec e) = derivate e |*| (Function Sec e |*| Function Tan e)
+derivate (Function Csc e) = derivate e |*| ((Neg (Function Csc e)) |+| (Function Cot e))
+derivate (Function Cot e) = derivate e |*| (Neg ((Function Csc e) |^| (Constant 2)))
 
 --Derivate sans chain rule
 nochain :: Expression -> Expression
@@ -194,15 +199,6 @@ byParts e = (u |*| v) |-| integrate (v |*| du)
 
 testByParts :: Expression -> Expression -> Bool
 testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
-
-    {-
-    Sudv = uv - Svdu
-    need to find u and dv
-    u should be simpler when integrated
-    dv should be integrateable
-    -}
-
-
 
 find :: String -> [Statement] -> Statement
 find s statements = head $ filter search statements

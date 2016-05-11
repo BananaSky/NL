@@ -18,7 +18,6 @@ main = do
     mapM printLn statements
     hClose handle
 
-
     eval statements statements
 
     return ()

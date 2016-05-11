@@ -13,7 +13,7 @@ languageDef =
             , Token.identLetter     = alphaNum
             , Token.reservedNames   = ["true", "false", "if", "then", "else", "print", "return", "integrate", "derivate"]
             , Token.reservedOpNames = ["+", "-", "*", "/", "=", "and", "or", "not"
-                                     , "<", ">", "<=", ">=", "==", ":"]
+                                     , "<", ">", "<=", ">=", "==", ":", "sin", "cos", "tan", "log10", "ln"]
              }
 
 lexer = Token.makeTokenParser languageDef
@@ -26,7 +26,17 @@ integer    = Token.integer    lexer -- parses an integer
 semi       = Token.semi       lexer -- parses a semicolon
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 
-operators = [ [Prefix  (reservedOp "-"   >> return (Neg             ))          ]
+functions = [Prefix (reservedOp "sin" >> return (Function Sin)),
+             Prefix (reservedOp "cos" >> return (Function Cos)),
+             Prefix (reservedOp "tan" >> return (Function Tan)),
+             Prefix (reservedOp "sec" >> return (Function Sec)),
+             Prefix (reservedOp "csc" >> return (Function Csc)),
+             Prefix (reservedOp "cot" >> return (Function Cot)),
+             Prefix (reservedOp "ln"  >> return (Function (Log (Fractional 2.7)))),
+             Prefix (reservedOp "log10" >> return (Function (Log (Constant 10))))]
+
+operators = [ [Prefix  (reservedOp "-"  >> return (Neg))],
+              functions
             , [Infix  (reservedOp "^"   >> return (BinaryExpression Exponent)) AssocLeft,
                Infix  (reservedOp "*"   >> return (BinaryExpression Multiply)) AssocLeft,
                Infix  (reservedOp "/"   >> return (BinaryExpression Divide  )) AssocLeft]
@@ -58,6 +68,10 @@ type Base = Expression
 data LibraryFunction = Log Base
                      | Sin
                      | Cos
+                     | Tan
+                     | Sec
+                     | Csc
+                     | Cot
                      | Root Base
                      deriving (Eq, Show)
 
