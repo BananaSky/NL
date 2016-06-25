@@ -1,4 +1,3 @@
-# NLTC
-A compiler for a plain english programming language
+# Riemann
 
-Student Project I'm making in order to learn more about compilers
+A program that does first-year calculus
