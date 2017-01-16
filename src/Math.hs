@@ -97,13 +97,11 @@ simplifySub e (Constant 0) = simplify e
 simplifySub (Constant a) (Constant b) = (Constant $ a - b)
 simplifySub e1 e2 = simplify e1 |-| simplify e2
 
-
 calculate :: [Statement] -> Expression -> Integer
 calculate s (Constant c) = c
 calculate s (Neg e) = (*) (-1) (calculate s e)
 calculate s (BinaryExpression op e1 e2) = (fromOp op) (calculate s e1) (calculate s e2)
 calculate statements (Variable v) = calculate statements $ toExpression (find v statements) statements
-
 
 toExpression :: Statement -> [Statement] -> Expression
 toExpression (Calculation e) ss        = e
@@ -202,8 +200,9 @@ testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
 
 find :: String -> [Statement] -> Statement
 find s statements = head $ filter search statements
-  where search (Assignment ident _) = ident == s
+  where search (Assignment i _)                = i == s
         search (FunctionCall (Identifier i) _) = i == s
+        search _ = False
 
 terms :: Expression -> [Expression]
 terms ex = if nonConst ex
