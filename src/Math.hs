@@ -169,6 +169,9 @@ integrate (BinaryExpression Add      e1 e2) = integrate e1 |+| integrate e2
 integrate (BinaryExpression Subtract e1 e2) = integrate e1 |-| integrate e2
 integrate (BinaryExpression Multiply (Constant c) e2) = (Constant c) |*| integrate e2
 integrate (BinaryExpression Multiply e1 (Constant c)) = (Constant c) |*| integrate e1
+integrate (BinaryExpression Divide (Constant 1) (Variable v)) = (Function (Log (Fractional 2.71)) (Variable v))
+integrate (Function Sin (Variable x)) = Neg (Function Cos (Variable x)) 
+integrate (Function Cos (Variable x)) = (Function Sin (Variable x))
 integrate e = if (length $ filter (testUSub e) (terms e)) > 0
               then uSub e
               else byParts e
