@@ -1,13 +1,7 @@
-a = sin (x * x)
+a = (1 + x)^3 
 derivate a
-b = x
-integrate b
-c = 1 / x
+b = integrate a
+derivate b
+
+c = x * x^2
 integrate c
-d = sin(x)
-derivate d
-integrate d
-e = (1 + x)^3 
-derivate e
-f = integrate e
-derivate f

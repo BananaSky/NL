@@ -36,9 +36,9 @@ functions = [Prefix (reservedOp "sin" >> return (Function Sin)),
              Prefix (reservedOp "log10" >> return (Function (Log (Constant 10))))]
 
 operators = [ [Prefix  (reservedOp "-"  >> return (Neg))],
-              functions
-            , [Infix  (reservedOp "^"   >> return (BinaryExpression Exponent)) AssocLeft,
-               Infix  (reservedOp "*"   >> return (BinaryExpression Multiply)) AssocLeft,
+              functions,
+              [Infix  (reservedOp "^"   >> return (BinaryExpression Exponent)) AssocLeft]
+            , [Infix  (reservedOp "*"   >> return (BinaryExpression Multiply)) AssocLeft,
                Infix  (reservedOp "/"   >> return (BinaryExpression Divide  )) AssocLeft]
             , [Infix  (reservedOp "+"   >> return (BinaryExpression Add     )) AssocLeft,
                Infix  (reservedOp "-"   >> return (BinaryExpression Subtract)) AssocLeft]

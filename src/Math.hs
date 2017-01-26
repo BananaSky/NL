@@ -177,12 +177,15 @@ integrate e = if (length $ filter (testUSub e) (terms e)) > 0
               else byParts e
 
 uSub :: Expression -> Expression
+uSub e = Variable "U-Sub" |*| e
+{-
 uSub e = constantPart |*| integrate (simplify $ remove e du)
   where possible_us  = filter (testUSub e) ts
         u            = head $ possible_us
         ts           = terms e
         du           = simplify . simplify $ nochain u
         constantPart = solve (remove u du |=| u)
+-}
 
 testUSub :: Expression -> Expression -> Bool
 testUSub e u = if u /= e then isConstant $  remove (remove e du) u

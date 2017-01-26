@@ -4,7 +4,14 @@ import Syntax
 import Math
 
 printLn a = putStrLn $ show a
-printExpression = putStrLn . prettify . simplify
+
+{-
+repeatSimplify :: Expression -> Expression
+repeatSimplify e = foldr (.) id (replicate length simplify)
+    where length = 10
+-}
+
+printExpression = putStrLn . prettify . simplify 
 
 eval :: [Statement] -> [Statement] -> IO ()
 eval [] _ = return ()
