@@ -174,22 +174,23 @@ integrate (Function Sin (Variable x)) = Neg (Function Cos (Variable x))
 integrate (Function Cos (Variable x)) = (Function Sin (Variable x))
 integrate e = uSub e
 
-uSub :: Expression -> Expression
-uSub e = replace( replace e u (Variable "u") ) du (Variable "du")
-  where subterms = terms e 
-        u        = subterms !! 3
-        du       = simplify . simplify $ nochain u
-        --possible_us  = filter (testUSub e) subterms 
-{-
-        u            = possible_us !! 0
-        du           = simplify . simplify $ nochain u
--}
+applyUSub :: Expression -> Expression -> Expression -> Expression
+applyUSub e u du = replace (replace e u (Variable "u")) du (Constant 1) 
 
-{-
+uSub :: Expression -> Expression
+uSub e = replace integral (Variable "u") u 
+    where subterms     = terms e 
+          u            = possible_us !! 0 
+          du           = simplify . simplify $ nochain u
+          possible_us  = filter (testUSub e) subterms 
+          integral     = integrate $ applyUSub e u du
+
 testUSub :: Expression -> Expression -> Bool
-testUSub e u = isConstant  $ remove (remove e u) du
+testUSub e u = isConstant  $ replace (replace e u (Constant 1)) du (Constant 1)
     where du = simplify . simplify $ nochain u 
 
+{-
+ -
 byParts :: Expression -> Expression
 byParts e = (u |*| v) |-| integrate (v |*| du)
   where ts          = terms e
@@ -285,3 +286,12 @@ replace e a b = if e == a then b -- Replace instances of a with b
                     (BinaryExpression Exponent e1 e2)  -> (replace e1 a b) |^| (replace e2 a b)
                     (Function f e1)                    -> (Function f $ replace e1 a b)
                     e                                  -> e
+
+remove :: Expression -> Expression -> Expression
+remove e a = if e == a then Constant 1 
+             else case e of
+                 (Neg e1)                                     -> Neg $ remove e1 a 
+                 (BinaryExpression Multiply e1 e2)            -> (remove e1 a) |*| (remove e2 a)
+                 (BinaryExpression Exponent e1 (Constant _))  -> Constant 1 
+                 (Function f e1)                              -> (Function f $ remove e1 a)
+                 e                                            -> e
