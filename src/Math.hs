@@ -172,25 +172,23 @@ integrate (BinaryExpression Multiply e1 (Constant c)) = (Constant c) |*| integra
 integrate (BinaryExpression Divide (Constant 1) (Variable v)) = (Function (Log (Fractional 2.71)) (Variable v))
 integrate (Function Sin (Variable x)) = Neg (Function Cos (Variable x)) 
 integrate (Function Cos (Variable x)) = (Function Sin (Variable x))
-integrate e = if (length $ filter (testUSub e) (terms e)) > 0
-              then uSub e
-              else byParts e
+integrate e = uSub e
 
 uSub :: Expression -> Expression
-uSub e = Variable "U-Sub" |*| e
+uSub e = replace( replace e u (Variable "u") ) du (Variable "du")
+  where subterms = terms e 
+        u        = subterms !! 3
+        du       = simplify . simplify $ nochain u
+        --possible_us  = filter (testUSub e) subterms 
 {-
-uSub e = constantPart |*| integrate (simplify $ remove e du)
-  where possible_us  = filter (testUSub e) ts
-        u            = head $ possible_us
-        ts           = terms e
+        u            = possible_us !! 0
         du           = simplify . simplify $ nochain u
-        constantPart = solve (remove u du |=| u)
 -}
 
+{-
 testUSub :: Expression -> Expression -> Bool
-testUSub e u = if u /= e then isConstant $  remove (remove e du) u
-           else False
-  where du = simplify .simplify $ nochain u --Derivate, but don't apply chain rule
+testUSub e u = isConstant  $ remove (remove e u) du
+    where du = simplify . simplify $ nochain u 
 
 byParts :: Expression -> Expression
 byParts e = (u |*| v) |-| integrate (v |*| du)
@@ -203,6 +201,7 @@ byParts e = (u |*| v) |-| integrate (v |*| du)
 
 testByParts :: Expression -> Expression -> Bool
 testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
+-}
 
 find :: String -> [Statement] -> Statement
 find s statements = head $ filter search statements
@@ -210,18 +209,28 @@ find s statements = head $ filter search statements
         search (FunctionCall (Identifier i) _) = i == s
         search _ = False
 
+subterms :: Expression -> [Expression]
+subterms ex = if nonConst ex
+              then case ex of
+                (Neg e)                      -> [ex] ++ subterms e
+                (BinaryExpression op e1 e2)  -> [ex] ++ subterms e1 ++ subterms e2
+                (Function _ e)               -> [ex] ++ subterms e
+                e                            -> [e]
+              else []
+
 terms :: Expression -> [Expression]
 terms ex = if nonConst ex
 then case ex of
-  (Neg e)                      -> [ex] ++ terms e
-  (BinaryExpression op e1 e2)  -> [ex] ++ terms e1 ++ terms e2
-  (Function _ e)               -> [ex] ++ terms e
-  e                            -> [e]
+  (Neg e)                      -> subterms e
+  (BinaryExpression op e1 e2)  -> subterms e1 ++ subterms e2
+  (Function _ e)               -> subterms e
+  _ -> []
 else []
 
 nonConst e = not $ isConstant e
 
 isConstant :: Expression -> Bool
+isConstant (Constant 0)               = False
 isConstant (Constant c)               = True
 isConstant (Neg e)                    = isConstant e
 isConstant (BinaryExpression _ e1 e2) = isConstant e1 && isConstant e2
@@ -268,12 +277,11 @@ reverseOp op = case op of
   Multiply -> Divide
   Divide   -> Multiply
 
-
-remove :: Expression -> Expression -> Expression
-remove e removal = if e == removal then Constant 1
-  else case e of
-    (Neg e1)                           -> Neg $ remove e1 removal
-    (BinaryExpression Multiply e1 e2)  -> (remove e1 removal) |*| (remove e2 removal)
-    (BinaryExpression Exponent e1 e2)  -> (remove e1 removal) |^| (remove e2 removal)
-    (Function f e1)                    -> (Function f $ remove e1 removal)
-    e                                  -> e
+replace :: Expression -> Expression -> Expression -> Expression
+replace e a b = if e == a then b -- Replace instances of a with b
+                else case e of
+                    (Neg e1)                           -> Neg $ replace e1 a b 
+                    (BinaryExpression Multiply e1 e2)  -> (replace e1 a b) |*| (replace e2 a b)
+                    (BinaryExpression Exponent e1 e2)  -> (replace e1 a b) |^| (replace e2 a b)
+                    (Function f e1)                    -> (Function f $ replace e1 a b)
+                    e                                  -> e
