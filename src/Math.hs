@@ -174,34 +174,44 @@ integrate (Function Sin (Variable x)) = Neg (Function Cos (Variable x))
 integrate (Function Cos (Variable x)) = (Function Sin (Variable x))
 integrate e = uSub e
 
-applyUSub :: Expression -> Expression -> Expression -> Expression
-applyUSub e u du = replace (replace e u (Variable "u")) du (Constant 1) 
+applyUSub :: Expression -> Expression -> Expression
+applyUSub e u = replace (replace e u (Variable "u")) du (Variable "du") 
+    where du = simplify . simplify $ nochain u 
 
 uSub :: Expression -> Expression
-uSub e = replace integral (Variable "u") u 
+uSub e = replace (integrate sub) (Variable "u") u 
     where subterms     = terms e 
-          u            = possible_us !! 0 
-          du           = simplify . simplify $ nochain u
           possible_us  = filter (testUSub e) subterms 
-          integral     = integrate $ applyUSub e u du
+          u            = possible_us !! 0 
+          sub          = simplify $ replace (applyUSub e u) (Variable "du") (Constant 1)
 
 testUSub :: Expression -> Expression -> Bool
-testUSub e u = isConstant  $ replace (replace e u (Constant 1)) du (Constant 1)
-    where du = simplify . simplify $ nochain u 
+testUSub e u = containsVar sub "du" && containsVar sub "u" && uSubSuccess sub 
+    where sub = applyUSub e u
+
+uSubSuccess :: Expression -> Bool
+uSubSuccess e = case e of
+                (Neg e)                      -> uSubSuccess e 
+                (BinaryExpression op e1 e2)  -> uSubSuccess e1 && uSubSuccess e2 
+                (Function _ e)               -> uSubSuccess e 
+                (Constant c)                 -> True
+                (Variable "u")               -> True
+                (Variable "du")              -> True
+                e                            -> False 
+
+containsVar :: Expression -> [Char] -> Bool
+containsVar e a = case e of
+                (Variable v)                 -> v == a 
+                (Neg e)                      -> containsVar e a
+                (BinaryExpression op e1 e2)  -> containsVar e1 a || containsVar e2 a
+                (Function _ e)               -> containsVar e a
+                e                            -> False 
 
 {-
  -
 byParts :: Expression -> Expression
 byParts e = (u |*| v) |-| integrate (v |*| du)
-  where ts          = terms e
-        possible_us = filter (testByParts e) ts
-        u           = head $ possible_us
-        dv          = remove e u
-        du          = simplify . simplify $ derivate u
-        v           = integrate dv
-
-testByParts :: Expression -> Expression -> Bool
-testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
+  where ts          = terms e possible_us = filter (testByParts e) ts u           = head $ possible_us dv          = remove e u du          = simplify . simplify $ derivate u v           = integrate dv testByParts :: Expression -> Expression -> Bool testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
 -}
 
 find :: String -> [Statement] -> Statement
@@ -283,15 +293,6 @@ replace e a b = if e == a then b -- Replace instances of a with b
                 else case e of
                     (Neg e1)                           -> Neg $ replace e1 a b 
                     (BinaryExpression Multiply e1 e2)  -> (replace e1 a b) |*| (replace e2 a b)
-                    (BinaryExpression Exponent e1 e2)  -> (replace e1 a b) |^| (replace e2 a b)
+                    (BinaryExpression Exponent e1 (Constant c))  -> (replace e1 a b) |^| (Constant c) 
                     (Function f e1)                    -> (Function f $ replace e1 a b)
                     e                                  -> e
-
-remove :: Expression -> Expression -> Expression
-remove e a = if e == a then Constant 1 
-             else case e of
-                 (Neg e1)                                     -> Neg $ remove e1 a 
-                 (BinaryExpression Multiply e1 e2)            -> (remove e1 a) |*| (remove e2 a)
-                 (BinaryExpression Exponent e1 (Constant _))  -> Constant 1 
-                 (Function f e1)                              -> (Function f $ remove e1 a)
-                 e                                            -> e
