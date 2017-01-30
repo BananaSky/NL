@@ -1,6 +1,7 @@
 #!/bin/bash
 
 cabal sandbox init
+rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
 cabal install -j
-sudo cp .cabal-sandbox/bin/Riemann .
-./Riemann
+rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
+./.cabal-sandbox/bin/Riemann

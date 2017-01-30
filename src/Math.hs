@@ -34,7 +34,8 @@ simplify :: Expression -> Expression
 simplify   (Constant n) = (Constant n)
 simplify   (Variable s) = (Variable s)
 simplify   (Neg (Constant 0))      = Constant 0
-simplify   (Neg e)      = (Neg $ simplify e)
+simplify   (Neg (Neg e)) = simplify e
+simplify   (Neg e)       = (Neg $ simplify e)
 simplify e@(BinaryExpression binop e1 e2) = case binop of
   Add      -> simplifyAdd se1 se2
   Subtract -> simplifySub se1 se2
@@ -95,15 +96,14 @@ simplifySub :: Expression -> Expression -> Expression
 simplifySub (Constant 0) e = Neg $ simplify e
 simplifySub e (Constant 0) = simplify e
 simplifySub (Constant a) (Constant b) = (Constant $ a - b)
+simplifySub e1 (Neg e2) = (BinaryExpression Add e1 e2)
 simplifySub e1 e2 = simplify e1 |-| simplify e2
-
 
 calculate :: [Statement] -> Expression -> Integer
 calculate s (Constant c) = c
 calculate s (Neg e) = (*) (-1) (calculate s e)
 calculate s (BinaryExpression op e1 e2) = (fromOp op) (calculate s e1) (calculate s e2)
 calculate statements (Variable v) = calculate statements $ toExpression (find v statements) statements
-
 
 toExpression :: Statement -> [Statement] -> Expression
 toExpression (Calculation e) ss        = e
@@ -171,52 +171,93 @@ integrate (BinaryExpression Add      e1 e2) = integrate e1 |+| integrate e2
 integrate (BinaryExpression Subtract e1 e2) = integrate e1 |-| integrate e2
 integrate (BinaryExpression Multiply (Constant c) e2) = (Constant c) |*| integrate e2
 integrate (BinaryExpression Multiply e1 (Constant c)) = (Constant c) |*| integrate e1
-integrate e = if (length $ filter (testUSub e) (terms e)) > 0
+integrate (BinaryExpression Divide (Constant 1) (Variable v)) = (Function (Log (Fractional 2.71)) (Variable v))
+integrate (Function Sin (Variable x)) = Neg (Function Cos (Variable x)) 
+integrate (Function Cos (Variable x)) = (Function Sin (Variable x))
+integrate e = if not (null $ filter (testUSub e) (terms e))
               then uSub e
-              else byParts e
+              else byParts e 
+
+applyUSub :: Expression -> Expression -> Expression
+applyUSub e u = replace (replace e u (Variable "u")) du (Variable "du") 
+    where du = simplify . simplify $ nochain u 
 
 uSub :: Expression -> Expression
-uSub e = constantPart |*| integrate (simplify $ remove e du)
-  where possible_us  = filter (testUSub e) ts
-        u            = head $ possible_us
-        ts           = terms e
-        du           = simplify . simplify $ nochain u
-        constantPart = solve (remove u du |=| u)
+uSub e = integral |/| constantPart d 
+    where subterms     = terms e 
+          possible_us  = filter (testUSub e) subterms 
+          u            = possible_us !! 0 
+          sub          = simplify $ replace (applyUSub e u) (Variable "du") (Constant 1)
+          integral     = replace (integrate sub) (Variable "u") u
+          d            = simplify . simplify $ derivate integral
+
+constantPart :: Expression -> Expression
+constantPart e = case e of
+                    (Neg e1)                           -> Neg $ constantPart e1 
+                    (BinaryExpression Multiply e1 e2)  -> constantPart e1 |*| constantPart e2 
+                    (BinaryExpression Exponent _ _)    -> (Constant 1) 
+                    (Function f e1)                    -> (Constant 1) 
+                    (Constant c)                       -> (Constant c)
+                    e                                  -> (Constant 1)
 
 testUSub :: Expression -> Expression -> Bool
-testUSub e u = if u /= e then isConstant $  remove (remove e du) u
-           else False
-  where du = simplify .simplify $ nochain u --Derivate, but don't apply chain rule
+testUSub e u = containsVar sub "du" && containsVar sub "u" && uSubSuccess sub 
+    where sub = applyUSub e u
+
+uSubSuccess :: Expression -> Bool
+uSubSuccess e = case e of
+                (Neg e)                      -> uSubSuccess e 
+                (BinaryExpression op e1 e2)  -> uSubSuccess e1 && uSubSuccess e2 
+                (Function _ e)               -> uSubSuccess e 
+                (Constant c)                 -> True
+                (Variable "u")               -> True
+                (Variable "du")              -> True
+                e                            -> False 
+
+containsVar :: Expression -> [Char] -> Bool
+containsVar e a = case e of
+                (Variable v)                 -> v == a 
+                (Neg e)                      -> containsVar e a
+                (BinaryExpression op e1 e2)  -> containsVar e1 a || containsVar e2 a
+                (Function _ e)               -> containsVar e a
+                e                            -> False 
 
 byParts :: Expression -> Expression
-byParts e = (u |*| v) |-| integrate (v |*| du)
-  where ts          = terms e
-        possible_us = filter (testByParts e) ts
-        u           = head $ possible_us
-        dv          = remove e u
-        du          = simplify . simplify $ derivate u
-        v           = integrate dv
+byParts (BinaryExpression Multiply u dv) = (u |*| v) |-| integrate (v |*| du)
+  where du = simplify . simplify $ derivate u
+        v  = integrate dv
 
 testByParts :: Expression -> Expression -> Bool
-testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
+testByParts e u = isConstant $ simplify . simplify $ derivate (simplify $ replace e u (Constant 1))
 
 find :: String -> [Statement] -> Statement
 find s statements = head $ filter search statements
-  where search (Assignment ident _) = ident == s
+  where search (Assignment i _)                = i == s
         search (FunctionCall (Identifier i) _) = i == s
+        search _ = False
+
+subterms :: Expression -> [Expression]
+subterms ex = if nonConst ex
+              then case ex of
+                (Neg e)                      -> [ex] ++ subterms e
+                (BinaryExpression op e1 e2)  -> [ex] ++ subterms e1 ++ subterms e2
+                (Function _ e)               -> [ex] ++ subterms e
+                e                            -> [e]
+              else []
 
 terms :: Expression -> [Expression]
 terms ex = if nonConst ex
 then case ex of
-  (Neg e)                      -> [ex] ++ terms e
-  (BinaryExpression op e1 e2)  -> [ex] ++ terms e1 ++ terms e2
-  (Function _ e)               -> [ex] ++ terms e
-  e                            -> [e]
+  (Neg e)                      -> subterms e
+  (BinaryExpression op e1 e2)  -> subterms e1 ++ subterms e2
+  (Function _ e)               -> subterms e
+  _ -> []
 else []
 
 nonConst e = not $ isConstant e
 
 isConstant :: Expression -> Bool
+isConstant (Constant 0)               = False
 isConstant (Constant c)               = True
 isConstant (Neg e)                    = isConstant e
 isConstant (BinaryExpression _ e1 e2) = isConstant e1 && isConstant e2
@@ -263,12 +304,11 @@ reverseOp op = case op of
   Multiply -> Divide
   Divide   -> Multiply
 
-
-remove :: Expression -> Expression -> Expression
-remove e removal = if e == removal then Constant 1
-  else case e of
-    (Neg e1)                           -> Neg $ remove e1 removal
-    (BinaryExpression Multiply e1 e2)  -> (remove e1 removal) |*| (remove e2 removal)
-    (BinaryExpression Exponent e1 e2)  -> (remove e1 removal) |^| (remove e2 removal)
-    (Function f e1)                    -> (Function f $ remove e1 removal)
-    e                                  -> e
+replace :: Expression -> Expression -> Expression -> Expression
+replace e a b = if e == a then b -- Replace instances of a with b
+                else case e of
+                    (Neg e1)                           -> Neg $ replace e1 a b 
+                    (BinaryExpression Multiply e1 e2)  -> (replace e1 a b) |*| (replace e2 a b)
+                    (BinaryExpression Exponent e1 (Constant c))  -> (replace e1 a b) |^| (Constant c) 
+                    (Function f e1)                    -> (Function f $ replace e1 a b)
+                    e                                  -> e
