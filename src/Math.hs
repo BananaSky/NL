@@ -96,6 +96,7 @@ simplifySub :: Expression -> Expression -> Expression
 simplifySub (Constant 0) e = Neg $ simplify e
 simplifySub e (Constant 0) = simplify e
 simplifySub (Constant a) (Constant b) = (Constant $ a - b)
+simplifySub e1 (Neg e2) = (BinaryExpression Add e1 e2)
 simplifySub e1 e2 = simplify e1 |-| simplify e2
 
 calculate :: [Statement] -> Expression -> Integer
@@ -173,7 +174,9 @@ integrate (BinaryExpression Multiply e1 (Constant c)) = (Constant c) |*| integra
 integrate (BinaryExpression Divide (Constant 1) (Variable v)) = (Function (Log (Fractional 2.71)) (Variable v))
 integrate (Function Sin (Variable x)) = Neg (Function Cos (Variable x)) 
 integrate (Function Cos (Variable x)) = (Function Sin (Variable x))
-integrate e = uSub e
+integrate e = if not (null $ filter (testUSub e) (terms e))
+              then uSub e
+              else byParts e 
 
 applyUSub :: Expression -> Expression -> Expression
 applyUSub e u = replace (replace e u (Variable "u")) du (Variable "du") 
@@ -219,12 +222,13 @@ containsVar e a = case e of
                 (Function _ e)               -> containsVar e a
                 e                            -> False 
 
-{-
- -
 byParts :: Expression -> Expression
-byParts e = (u |*| v) |-| integrate (v |*| du)
-  where ts          = terms e possible_us = filter (testByParts e) ts u           = head $ possible_us dv          = remove e u du          = simplify . simplify $ derivate u v           = integrate dv testByParts :: Expression -> Expression -> Bool testByParts e u = isConstant $ simplify . simplify $ derivate (remove e u)
--}
+byParts (BinaryExpression Multiply u dv) = (u |*| v) |-| integrate (v |*| du)
+  where du = simplify . simplify $ derivate u
+        v  = integrate dv
+
+testByParts :: Expression -> Expression -> Bool
+testByParts e u = isConstant $ simplify . simplify $ derivate (simplify $ replace e u (Constant 1))
 
 find :: String -> [Statement] -> Statement
 find s statements = head $ filter search statements
