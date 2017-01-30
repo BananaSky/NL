@@ -34,7 +34,8 @@ simplify :: Expression -> Expression
 simplify   (Constant n) = (Constant n)
 simplify   (Variable s) = (Variable s)
 simplify   (Neg (Constant 0))      = Constant 0
-simplify   (Neg e)      = (Neg $ simplify e)
+simplify   (Neg (Neg e)) = simplify e
+simplify   (Neg e)       = (Neg $ simplify e)
 simplify e@(BinaryExpression binop e1 e2) = case binop of
   Add      -> simplifyAdd se1 se2
   Subtract -> simplifySub se1 se2
@@ -179,11 +180,22 @@ applyUSub e u = replace (replace e u (Variable "u")) du (Variable "du")
     where du = simplify . simplify $ nochain u 
 
 uSub :: Expression -> Expression
-uSub e = replace (integrate sub) (Variable "u") u 
+uSub e = integral |/| constantPart d 
     where subterms     = terms e 
           possible_us  = filter (testUSub e) subterms 
           u            = possible_us !! 0 
           sub          = simplify $ replace (applyUSub e u) (Variable "du") (Constant 1)
+          integral     = replace (integrate sub) (Variable "u") u
+          d            = simplify . simplify $ derivate integral
+
+constantPart :: Expression -> Expression
+constantPart e = case e of
+                    (Neg e1)                           -> Neg $ constantPart e1 
+                    (BinaryExpression Multiply e1 e2)  -> constantPart e1 |*| constantPart e2 
+                    (BinaryExpression Exponent _ _)    -> (Constant 1) 
+                    (Function f e1)                    -> (Constant 1) 
+                    (Constant c)                       -> (Constant c)
+                    e                                  -> (Constant 1)
 
 testUSub :: Expression -> Expression -> Bool
 testUSub e u = containsVar sub "du" && containsVar sub "u" && uSubSuccess sub 
